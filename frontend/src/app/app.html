@@ -539,6 +539,7 @@
                   <th>Equipo</th>
                   <th>Horas</th>
                   <th>Total</th>
+                  <th *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -552,10 +553,12 @@
                   <td>{{ order.vehicle?.deviceName || 'Desconocido' }}</td>
                   <td>{{ order.totalHours }} hrs</td>
                   <td><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString() }}</strong></td>
+                  <td *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">
+                    <button (click)="deleteWorkOrder(order.id)" class="btn-action-delete" title="Eliminar Conduce" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
+                  </td>
                 </tr>
                 <tr *ngIf="approvedWorkOrders().length === 0">
-                  <td colspan="6" class="text-center text-secondary">No se han registrado conduces aprobados todavía.
-                  </td>
+                  <td [attr.colspan]="authService.currentUser()?.role === 'admin' ? 7 : 6" class="text-center text-secondary">No se han registrado conduces aprobados todavía.</td>
                 </tr>
               </tbody>
             </table>
@@ -646,6 +649,7 @@
                   <th>Descripción</th>
                   <th>Máquina</th>
                   <th>Monto</th>
+                  <th *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -660,14 +664,16 @@
                   </td>
                   <td>
                     <div class="exp-desc">{{ exp.description }}</div>
-                    <small *ngIf="exp.operatorNameRaw" class="text-secondary">Operador: {{ exp.operatorNameRaw
-                      }}</small>
+                    <small *ngIf="exp.operatorNameRaw" class="text-secondary">Operador: {{ exp.operatorNameRaw }}</small>
                   </td>
                   <td>{{ exp.vehicle?.deviceName || 'General' }}</td>
                   <td><strong class="color-red">RD$ {{ exp.amount.toLocaleString() }}</strong></td>
+                  <td *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">
+                    <button (click)="deleteExpense(exp.id)" class="btn-action-delete" title="Eliminar Gasto" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
+                  </td>
                 </tr>
                 <tr *ngIf="expenses().length === 0">
-                  <td colspan="5" class="text-center text-secondary">No se han registrado egresos todavía.</td>
+                  <td [attr.colspan]="authService.currentUser()?.role === 'admin' ? 6 : 5" class="text-center text-secondary">No se han registrado egresos todavía.</td>
                 </tr>
               </tbody>
             </table>

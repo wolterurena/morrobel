@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { Expense } from './entities/expense.entity';
 
@@ -24,5 +24,15 @@ export class ExpensesController {
   @Post()
   async create(@Body() data: Partial<Expense>): Promise<Expense> {
     return this.expensesService.create(data);
+  }
+
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() data: Partial<Expense>): Promise<Expense | null> {
+    return this.expensesService.update(id, data);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.expensesService.remove(id);
   }
 }

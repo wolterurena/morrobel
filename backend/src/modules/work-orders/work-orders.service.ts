@@ -238,4 +238,13 @@ export class WorkOrdersService {
     const nextNumber = `${prefix}${nextSeq.toString().padStart(4, '0')}`;
     return { nextNumber };
   }
+
+  async update(id: string, data: Partial<WorkOrder>): Promise<WorkOrder | null> {
+    await this.workOrderRepository.update(id, data);
+    return this.findOne(id);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.workOrderRepository.delete(id);
+  }
 }

@@ -936,6 +936,88 @@ export class App implements OnInit {
     });
   }
 
+  deleteExpense(id: string) {
+    Swal.fire({
+      title: '¿Está seguro?',
+      text: 'Esta acción no se puede deshacer. Se eliminará el egreso del sistema.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#111827',
+      color: '#f3f4f6',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.apiService.deleteExpense(id).subscribe({
+          next: () => {
+            this.expenses.set(this.expenses().filter(e => e.id !== id));
+            Swal.fire({
+              title: '¡Eliminado!',
+              text: 'El egreso ha sido eliminado correctamente.',
+              icon: 'success',
+              background: '#111827',
+              color: '#f3f4f6',
+              confirmButtonColor: '#f59e0b',
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              title: 'Error',
+              text: err.error?.message || 'Error al eliminar el egreso.',
+              icon: 'error',
+              background: '#111827',
+              color: '#f3f4f6',
+              confirmButtonColor: '#f59e0b',
+            });
+          }
+        });
+      }
+    });
+  }
+
+  deleteWorkOrder(id: string) {
+    Swal.fire({
+      title: '¿Está seguro?',
+      text: 'Esta acción no se puede deshacer. Se eliminará el conduce del sistema.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#111827',
+      color: '#f3f4f6',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.apiService.deleteWorkOrder(id).subscribe({
+          next: () => {
+            this.workOrders.set(this.workOrders().filter(o => o.id !== id));
+            Swal.fire({
+              title: '¡Eliminado!',
+              text: 'El conduce ha sido eliminado correctamente.',
+              icon: 'success',
+              background: '#111827',
+              color: '#f3f4f6',
+              confirmButtonColor: '#f59e0b',
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              title: 'Error',
+              text: err.error?.message || 'Error al eliminar el conduce.',
+              icon: 'error',
+              background: '#111827',
+              color: '#f3f4f6',
+              confirmButtonColor: '#f59e0b',
+            });
+          }
+        });
+      }
+    });
+  }
+
   parseValue(val: any): { isTime: boolean; value: number; timeStr: string } {
     if (val === null || val === undefined || val === '') {
       return { isTime: false, value: 0, timeStr: '' };

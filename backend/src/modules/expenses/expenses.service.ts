@@ -110,4 +110,13 @@ export class ExpensesService implements OnModuleInit {
 
     return { totalExpenses, categoryBreakdown };
   }
+
+  async update(id: string, data: Partial<Expense>): Promise<Expense | null> {
+    await this.expenseRepository.update(id, data);
+    return this.findOne(id);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.expenseRepository.delete(id);
+  }
 }

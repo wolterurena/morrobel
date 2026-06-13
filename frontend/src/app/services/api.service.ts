@@ -67,6 +67,14 @@ export class ApiService {
     return this.http.post<any>(`${this.baseUrl}/work-orders`, data, { headers: this.getHeaders() });
   }
 
+  updateWorkOrder(id: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/work-orders/${id}`, data, { headers: this.getHeaders() });
+  }
+
+  deleteWorkOrder(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/work-orders/${id}`, { headers: this.getHeaders() });
+  }
+
   approveWorkOrder(id: string): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/work-orders/${id}/approve`, {}, { headers: this.getHeaders() });
   }
@@ -86,6 +94,14 @@ export class ApiService {
 
   createExpense(data: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/expenses`, data, { headers: this.getHeaders() });
+  }
+
+  updateExpense(id: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/expenses/${id}`, data, { headers: this.getHeaders() });
+  }
+
+  deleteExpense(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/expenses/${id}`, { headers: this.getHeaders() });
   }
 
   getExpensesStats(): Observable<any> {
