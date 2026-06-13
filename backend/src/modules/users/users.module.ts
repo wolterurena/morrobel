@@ -4,11 +4,12 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
+import { PasswordResetRequest } from './entities/reset-request.entity';
 import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Role])],
+  imports: [TypeOrmModule.forFeature([User, Role, PasswordResetRequest])],
   providers: [UsersService, RolesService],
   controllers: [UsersController, RolesController],
   exports: [UsersService, RolesService],

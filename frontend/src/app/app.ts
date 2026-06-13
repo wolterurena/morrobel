@@ -57,6 +57,12 @@ export class App implements OnInit {
   gpsSuccess = '';
   gpsError = '';
 
+  // Estados de recuperación y restablecimiento de contraseña
+  showRecoveryForm = signal<boolean>(false);
+  recoveryUsername = '';
+  recoveryMasterCode = '';
+  resetRequests = signal<any[]>([]);
+
   // Estados de formularios
   loginUsername = '';
   loginPassword = '';
@@ -305,6 +311,7 @@ export class App implements OnInit {
         next: (data) => this.gpsSettings.set(data),
         error: (err) => console.error('Error al cargar configuración GPS:', err)
       });
+      this.fetchResetRequests();
     }
   }
 
@@ -1230,6 +1237,88 @@ export class App implements OnInit {
           this.offlineQueue.set(updated);
           this.syncOfflineConduces();
         }
+      }
+    });
+  }
+
+  fetchResetRequests() {
+    this.apiService.getPendingResetRequests().subscribe({
+      next: (data) => this.resetRequests.set(data),
+      error: (err) => console.error('Error al cargar solicitudes de restablecimiento:', err)
+    });
+  }
+
+  onRequestReset() {
+    if (!this.recoveryUsername.trim()) return;
+
+    this.apiService.requestPasswordReset(this.recoveryUsername, this.recoveryMasterCode).subscribe({
+      next: () => {
+        const isAdmin = this.recoveryUsername === 'admin';
+        this.showRecoveryForm.set(false);
+        this.recoveryUsername = '';
+        this.recoveryMasterCode = '';
+        
+        Swal.fire({
+          title: isAdmin ? '¡Contraseña Restablecida!' : 'Solicitud Enviada',
+          text: isAdmin 
+            ? 'Tu contraseña de administrador ha sido restablecida a "admin". Por favor inicia sesión y cámbiala de inmediato.' 
+            : 'Se ha enviado tu solicitud. Comunícate con el administrador para que apruebe tu restablecimiento.',
+          icon: 'success',
+          background: '#111827',
+          color: '#f3f4f6',
+          confirmButtonColor: '#f59e0b',
+        });
+      },
+      error: (err) => {
+        Swal.fire({
+          title: 'Error',
+          text: err.error?.message || 'No se pudo enviar la solicitud.',
+          icon: 'error',
+          background: '#111827',
+          color: '#f3f4f6',
+          confirmButtonColor: '#f59e0b',
+        });
+      }
+    });
+  }
+
+  resolveResetRequest(id: string) {
+    Swal.fire({
+      title: '¿Aprobar Restablecimiento?',
+      text: 'La contraseña de este usuario se cambiará a 123456.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, restablecer',
+      cancelButtonText: 'Cancelar',
+      background: '#111827',
+      color: '#f3f4f6',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.apiService.resolveResetRequest(id).subscribe({
+          next: () => {
+            this.resetRequests.set(this.resetRequests().filter(r => r.id !== id));
+            Swal.fire({
+              title: '¡Restablecida!',
+              text: 'La contraseña ha sido cambiada a 123456 con éxito.',
+              icon: 'success',
+              background: '#111827',
+              color: '#f3f4f6',
+              confirmButtonColor: '#f59e0b',
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              title: 'Error',
+              text: err.error?.message || 'Error al restablecer la contraseña.',
+              icon: 'error',
+              background: '#111827',
+              color: '#f3f4f6',
+              confirmButtonColor: '#f59e0b',
+            });
+          }
+        });
       }
     });
   }

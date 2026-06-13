@@ -25,4 +25,14 @@ export class UsersController {
   async remove(@Param('id') id: string): Promise<void> {
     return this.usersService.remove(id);
   }
+
+  @Get('reset-requests')
+  async getResetRequests() {
+    return this.usersService.getPendingResetRequests();
+  }
+
+  @Post('reset-requests/:id/resolve')
+  async resolveResetRequest(@Param('id') id: string) {
+    return this.usersService.resolveResetRequest(id);
+  }
 }

@@ -124,4 +124,17 @@ export class ApiService {
   updateGpsSettings(data: any): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/settings/gps`, data, { headers: this.getHeaders() });
   }
+
+  // --- PASSWORD RECOVERY ---
+  requestPasswordReset(username: string, masterCode?: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/reset-request`, { username, masterCode });
+  }
+
+  getPendingResetRequests(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/users/reset-requests`, { headers: this.getHeaders() });
+  }
+
+  resolveResetRequest(id: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/users/reset-requests/${id}/resolve`, {}, { headers: this.getHeaders() });
+  }
 }

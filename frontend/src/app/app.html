@@ -7,25 +7,54 @@
       <p>Sistema de Ingresos y Gastos en Tiempo Real</p>
     </div>
 
-    <form (submit)="onLogin(); $event.preventDefault()">
-      <div class="form-group">
-        <label class="form-label" for="username">Usuario</label>
-        <input id="username" type="text" class="form-input" [(ngModel)]="loginUsername" name="username"
-          placeholder="Ej: admin o chequeador" required />
+    <ng-container *ngIf="!showRecoveryForm()">
+      <form (submit)="onLogin(); $event.preventDefault()">
+        <div class="form-group">
+          <label class="form-label" for="username">Usuario</label>
+          <input id="username" type="text" class="form-input" [(ngModel)]="loginUsername" name="username"
+            placeholder="Ej: admin o chequeador" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Contraseña</label>
+          <input id="password" type="password" class="form-input" [(ngModel)]="loginPassword" name="password"
+            placeholder="Ingrese su clave" required />
+        </div>
+
+        <div class="error-msg" *ngIf="loginError">
+          ⚠️ {{ loginError }}
+        </div>
+
+        <button type="submit" class="btn-primary w-full">Ingresar al Sistema</button>
+      </form>
+      <div style="text-align: center; margin-top: 15px;">
+        <a href="javascript:void(0)" (click)="showRecoveryForm.set(true)" style="color: var(--primary); font-size: 0.85rem; text-decoration: underline;">¿Olvidó su contraseña?</a>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="showRecoveryForm()">
+      <div style="margin-bottom: 20px; text-align: center;">
+        <h3 style="font-size: 1.15rem; color: var(--primary); margin-bottom: 5px;">Recuperar Contraseña</h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">Ingrese su usuario para enviar la solicitud de restablecimiento al administrador.</p>
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="password">Contraseña</label>
-        <input id="password" type="password" class="form-input" [(ngModel)]="loginPassword" name="password"
-          placeholder="Ingrese su clave" required />
-      </div>
+      <form (submit)="onRequestReset(); $event.preventDefault()">
+        <div class="form-group">
+          <label class="form-label" for="recoveryUsername">Nombre de Usuario</label>
+          <input id="recoveryUsername" type="text" class="form-input" [(ngModel)]="recoveryUsername" name="recoveryUsername"
+            placeholder="Ej: jperez" required />
+        </div>
 
-      <div class="error-msg" *ngIf="loginError">
-        ⚠️ {{ loginError }}
-      </div>
+        <div class="form-group" *ngIf="recoveryUsername === 'admin'">
+          <label class="form-label" for="recoveryMasterCode">Código Maestro de Recuperación</label>
+          <input id="recoveryMasterCode" type="password" class="form-input" [(ngModel)]="recoveryMasterCode" name="recoveryMasterCode"
+            placeholder="Ingrese el código maestro" required />
+        </div>
 
-      <button type="submit" class="btn-primary w-full">Ingresar al Sistema</button>
-    </form>
+        <button type="submit" class="btn-primary w-full">Solicitar Restablecimiento</button>
+        <button type="button" (click)="showRecoveryForm.set(false); recoveryMasterCode = ''" class="btn-secondary w-full mt-2" style="padding: 10px;">Volver al Login</button>
+      </form>
+    </ng-container>
 
     <div *ngIf="!isProduction" class="login-footer">
       <p>Credenciales de prueba:</p>
@@ -544,16 +573,16 @@
               </thead>
               <tbody>
                 <tr *ngFor="let order of approvedWorkOrders()" class="animate-fade-in">
-                  <td><strong>#{{ order.conduceNumber }}</strong></td>
-                  <td>{{ order.date }}</td>
-                  <td>
+                  <td data-label="No."><strong>#{{ order.conduceNumber }}</strong></td>
+                  <td data-label="Fecha">{{ order.date }}</td>
+                  <td data-label="Cliente">
                     <div class="client-name">{{ order.client }}</div>
                     <small class="text-secondary">{{ order.project }}</small>
                   </td>
-                  <td>{{ order.vehicle?.deviceName || 'Desconocido' }}</td>
-                  <td>{{ order.totalHours }} hrs</td>
-                  <td><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString() }}</strong></td>
-                  <td *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">
+                  <td data-label="Equipo">{{ order.vehicle?.deviceName || 'Desconocido' }}</td>
+                  <td data-label="Horas">{{ order.totalHours }} hrs</td>
+                  <td data-label="Total"><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString() }}</strong></td>
+                  <td *ngIf="authService.currentUser()?.role === 'admin'" data-label="Acciones" style="text-align: center;">
                     <button (click)="deleteWorkOrder(order.id)" class="btn-action-delete" title="Eliminar Conduce" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
                   </td>
                 </tr>
@@ -654,21 +683,21 @@
               </thead>
               <tbody>
                 <tr *ngFor="let exp of expenses()" class="animate-fade-in">
-                  <td>{{ exp.date }}</td>
-                  <td>
+                  <td data-label="Fecha">{{ exp.date }}</td>
+                  <td data-label="Categoría">
                     <span class="badge" [class.badge-warning]="exp.category === 'fuel'"
                       [class.badge-danger]="exp.category === 'maintenance'"
                       [class.badge-success]="exp.category === 'advance_loan'">
                       {{ getCategoryLabel(exp.category) }}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Descripción">
                     <div class="exp-desc">{{ exp.description }}</div>
                     <small *ngIf="exp.operatorNameRaw" class="text-secondary">Operador: {{ exp.operatorNameRaw }}</small>
                   </td>
-                  <td>{{ exp.vehicle?.deviceName || 'General' }}</td>
-                  <td><strong class="color-red">RD$ {{ exp.amount.toLocaleString() }}</strong></td>
-                  <td *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">
+                  <td data-label="Máquina">{{ exp.vehicle?.deviceName || 'General' }}</td>
+                  <td data-label="Monto"><strong class="color-red">RD$ {{ exp.amount.toLocaleString() }}</strong></td>
+                  <td *ngIf="authService.currentUser()?.role === 'admin'" data-label="Acciones" style="text-align: center;">
                     <button (click)="deleteExpense(exp.id)" class="btn-action-delete" title="Eliminar Gasto" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
                   </td>
                 </tr>
@@ -785,9 +814,9 @@
               </thead>
               <tbody>
                 <tr *ngFor="let op of operatorSettlements()">
-                  <td><strong>{{ op.name }}</strong></td>
-                  <td><strong class="color-amber">{{ op.hours | number:'1.1-2' }} hrs</strong></td>
-                  <td><strong class="color-red">RD$ {{ op.advances.toLocaleString() }}</strong></td>
+                  <td data-label="Operador"><strong>{{ op.name }}</strong></td>
+                  <td data-label="Horas Trabajadas"><strong class="color-amber">{{ op.hours | number:'1.1-2' }} hrs</strong></td>
+                  <td data-label="Adelantos / Préstamos"><strong class="color-red">RD$ {{ op.advances.toLocaleString() }}</strong></td>
                 </tr>
                 <tr *ngIf="operatorSettlements().length === 0">
                   <td colspan="3" class="text-center text-secondary" style="padding: 20px;">No hay operadores
@@ -816,10 +845,10 @@
               </thead>
               <tbody>
                 <tr *ngFor="let v of vehicles()">
-                  <td><strong>{{ v.deviceName }}</strong></td>
-                  <td>RD$ {{ getVehicleIncomeFiltered(v.id).toLocaleString() }}</td>
-                  <td>RD$ {{ getVehicleExpensesFiltered(v.id).toLocaleString() }}</td>
-                  <td>
+                  <td data-label="Equipo"><strong>{{ v.deviceName }}</strong></td>
+                  <td data-label="Ingreso Bruto">RD$ {{ getVehicleIncomeFiltered(v.id).toLocaleString() }}</td>
+                  <td data-label="Egresos Propios">RD$ {{ getVehicleExpensesFiltered(v.id).toLocaleString() }}</td>
+                  <td data-label="Balance Neto">
                     <span [class.color-green]="getVehicleIncomeFiltered(v.id) - getVehicleExpensesFiltered(v.id) >= 0"
                       [class.color-red]="getVehicleIncomeFiltered(v.id) - getVehicleExpensesFiltered(v.id) < 0">
                       RD$ {{ (getVehicleIncomeFiltered(v.id) - getVehicleExpensesFiltered(v.id)).toLocaleString() }}
@@ -858,6 +887,11 @@
         <button [class.active]="activeConfigSubTab() === 'users'" (click)="activeConfigSubTab.set('users')"
           class="config-tab-item">
           👥 Empleados
+        </button>
+        <button [class.active]="activeConfigSubTab() === 'resets'" (click)="activeConfigSubTab.set('resets')"
+          class="config-tab-item">
+          🔑 Solicitudes de Clave
+          <span *ngIf="resetRequests().length > 0" class="badge badge-danger" style="margin-left: 5px; padding: 2px 6px;">{{ resetRequests().length }}</span>
         </button>
       </div>
 
@@ -1041,12 +1075,11 @@
               </thead>
               <tbody>
                 <tr *ngFor="let v of vehicles()">
-                  <td><strong>{{ v.deviceName }}</strong><br><small class="text-secondary">{{ v.plateNumber || 'Sin
-                      Placa' }}</small></td>
-                  <td>{{ v.deviceType }}</td>
-                  <td>RD$ {{ v.hourlyRate.toLocaleString() }}</td>
-                  <td>{{ v.currentHourmeter }} hrs</td>
-                  <td style="text-align: center;">
+                  <td data-label="Equipo"><strong>{{ v.deviceName }}</strong><br><small class="text-secondary">{{ v.plateNumber || 'Sin Placa' }}</small></td>
+                  <td data-label="Tipo">{{ v.deviceType }}</td>
+                  <td data-label="Tarifa/Hora">RD$ {{ v.hourlyRate.toLocaleString() }}</td>
+                  <td data-label="Horómetro">{{ v.currentHourmeter }} hrs</td>
+                  <td data-label="Acciones" style="text-align: center;">
                     <div style="display: flex; gap: 8px; justify-content: center;">
                       <button (click)="startEditVehicle(v)" class="btn-action-edit" title="Editar"
                         style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--success); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(16, 185, 129, 0.3);">✏️</button>
@@ -1121,15 +1154,15 @@
               </thead>
               <tbody>
                 <tr *ngFor="let u of users()">
-                  <td><strong>{{ u.name }}</strong></td>
-                  <td><code>{{ u.username }}</code></td>
-                  <td>
+                  <td data-label="Nombre"><strong>{{ u.name }}</strong></td>
+                  <td data-label="Usuario"><code>{{ u.username }}</code></td>
+                  <td data-label="Cargo">
                     <span class="badge" [class.badge-success]="u.role === 'admin'"
                       [class.badge-warning]="u.role === 'checker'" [class.badge-danger]="u.role === 'operator'">
                       {{ u.role === 'admin' ? 'Administrador' : u.role === 'checker' ? 'Chequeador' : 'Operador' }}
                     </span>
                   </td>
-                  <td style="text-align: center;">
+                  <td data-label="Acciones" style="text-align: center;">
                     <div style="display: flex; gap: 8px; justify-content: center;">
                       <button (click)="startEditUser(u)" class="btn-action-edit" title="Editar"
                         style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--success); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(16, 185, 129, 0.3);">✏️</button>
@@ -1141,6 +1174,38 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- SUB TAB 5: PASSWORD RESET REQUESTS -->
+      <div *ngIf="activeConfigSubTab() === 'resets'" class="card-glass p-6 animate-fade-in">
+        <h3>🔑 Solicitudes de Restablecimiento de Contraseña</h3>
+        <p class="section-desc mb-4">A continuación se listan los usuarios que han solicitado restablecer su contraseña. Al aprobar, su clave cambiará a <strong>123456</strong>.</p>
+
+        <div class="table-container mt-4">
+          <table class="table-premium">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Fecha de Solicitud</th>
+                <th style="text-align: center;">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let req of resetRequests()" class="animate-fade-in">
+                <td data-label="Usuario"><strong>{{ req.username }}</strong></td>
+                <td data-label="Fecha">{{ req.createdAt | date:'short' }}</td>
+                <td data-label="Acción" style="text-align: center;">
+                  <button (click)="resolveResetRequest(req.id)" class="btn-approve">
+                    ✔️ Restablecer a 123456
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="resetRequests().length === 0">
+                <td colspan="3" class="text-center text-secondary" style="padding: 20px;">No hay solicitudes de restablecimiento pendientes.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
