@@ -12,9 +12,23 @@ export class AuthService {
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByUsername(username);
-    if (user && user.password && await bcrypt.compare(pass, user.password)) {
-      const { password, ...result } = user;
-      return result;
+    if (user && user.password) {
+      let isValid = false;
+      if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+        isValid = await bcrypt.compare(pass, user.password);
+      } else {
+        // Plaintext password fallback
+        isValid = user.password === pass;
+        if (isValid) {
+          // Lazy migration: hash password and update user in database
+          const hashedPassword = await bcrypt.hash(pass, 10);
+          await this.usersService.update(user.id, { password: hashedPassword });
+        }
+      }
+      if (isValid) {
+        const { password, ...result } = user;
+        return result;
+      }
     }
     return null;
   }
