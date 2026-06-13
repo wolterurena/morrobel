@@ -323,8 +323,20 @@
                 <strong>{{ order.operatorNameRaw }}</strong>
               </div>
 
+              <!-- Mostrar por Viajes (Camión Volteo) -->
+              <ng-container *ngIf="order.registerType === 'trips'">
+                <div class="pending-detail-item">
+                  <span>Capacidad</span>
+                  <strong>{{ order.capacity }} m³</strong>
+                </div>
+                <div class="pending-detail-item">
+                  <span>Viajes Realizados</span>
+                  <strong>{{ order.trips }} viajes</strong>
+                </div>
+              </ng-container>
+
               <!-- Mostrar por Horómetro -->
-              <ng-container *ngIf="order.registerType !== 'clock'">
+              <ng-container *ngIf="order.registerType !== 'clock' && order.registerType !== 'trips'">
                 <div class="pending-detail-item">
                   <span>Horómetro Inicial</span>
                   <strong>{{ order.startHourmeter }} hrs</strong>
@@ -347,10 +359,18 @@
               </ng-container>
 
               <div class="pending-detail-item">
-                <span>Horas Calculadas</span>
-                <strong>{{ order.totalHours | number:'1.1-2' }} hrs</strong>
+                <span>{{ order.registerType === 'trips' ? 'M³ Totales' : 'Horas Calculadas' }}</span>
+                <strong>{{ order.totalHours | number:'1.1-2' }} {{ order.registerType === 'trips' ? 'm³' : 'hrs' }}</strong>
               </div>
               <div class="pending-detail-item">
+                <span>{{ order.registerType === 'trips' ? 'Precio por m³' : 'Tarifa Horaria' }}</span>
+                <strong>RD$ {{ (order.vehicle?.hourlyRate || 0) | number:'1.0-2' }}</strong>
+              </div>
+              <div class="pending-detail-item">
+                <span>Costo Calculado</span>
+                <strong style="color: var(--amber);">RD$ {{ (order.totalHours * (order.vehicle?.hourlyRate || 0)) | number:'1.0-2' }}</strong>
+              </div>
+              <div class="pending-detail-item" style="grid-column: span 2;">
                 <span>Lubricantes Suministrados</span>
                 <strong>Aceite: {{ order.oil || 0 }}g | Gasoil: {{ order.gasoil || 0 }}g | Gasolina: {{ order.gasoline
                   || 0 }}g</strong>
@@ -438,67 +458,89 @@
               </div>
             </div>
 
-            <!-- REGISTRO DE JORNADA (HORAS) -->
+            <!-- REGISTRO DE JORNADA / VIAJES -->
             <div
               style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-glass); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h4 style="margin: 0; color: var(--primary);">⏱️ Registro de Jornada / Horas</h4>
-                <div
-                  style="display: flex; gap: 5px; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px;">
-                  <button type="button" (click)="row1Type = 'time'"
-                    [style.background]="row1Type === 'time' ? 'var(--amber)' : 'transparent'"
-                    [style.color]="row1Type === 'time' ? '#000' : 'var(--text-secondary)'"
-                    style="border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">⏰
-                    Hora</button>
-                  <button type="button" (click)="row1Type = 'hourmeter'"
-                    [style.background]="row1Type === 'hourmeter' ? 'var(--amber)' : 'transparent'"
-                    [style.color]="row1Type === 'hourmeter' ? '#000' : 'var(--text-secondary)'"
-                    style="border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">📟
-                    Horómetro</button>
+              
+              <!-- Si es Camión Volteo: Registro por Viajes -->
+              <div *ngIf="getSelectedVehicle()?.deviceType === 'Camión Volteo'">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                  <h4 style="margin: 0; color: var(--primary);">🚛 Registro por Viajes / Capacidad</h4>
+                </div>
+                
+                <div class="form-grid-2 mb-3">
+                  <div class="form-group">
+                    <label class="form-label" for="truckCapacity">Capacidad del Camión (m³)</label>
+                    <input id="truckCapacity" type="number" class="form-input" [value]="getSelectedVehicle()?.capacity" readonly />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="truckTrips">Número de Viajes</label>
+                    <input id="truckTrips" type="number" class="form-input" [(ngModel)]="newConduce.trips" name="trips" min="1" placeholder="Ej: 5" required />
+                  </div>
                 </div>
               </div>
 
-              <!-- Fila 1: Horómetro / Hora -->
-              <div class="form-grid-2 mb-3">
-                <div class="form-group">
-                  <label class="form-label" for="startHourmeter">{{ row1Type === 'time' ? 'Inicio Horómetro (Hora)' :
-                    'Inicio Horómetro (Número)' }}</label>
-                  <input *ngIf="row1Type === 'time'" id="startHourmeter" type="time" class="form-input"
-                    [(ngModel)]="newConduce.startHourmeter" name="startHourmeter" required />
-                  <input *ngIf="row1Type === 'hourmeter'" id="startHourmeter" type="number" step="0.1"
-                    class="form-input" [(ngModel)]="newConduce.startHourmeter" name="startHourmeter"
-                    placeholder="Ej: 1024.5" required />
+              <!-- Si NO es Camión Volteo: Registro de Jornada -->
+              <div *ngIf="getSelectedVehicle()?.deviceType !== 'Camión Volteo'">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                  <h4 style="margin: 0; color: var(--primary);">⏱️ Registro de Jornada / Horas</h4>
+                  <div
+                    style="display: flex; gap: 5px; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px;">
+                    <button type="button" (click)="row1Type = 'time'"
+                      [style.background]="row1Type === 'time' ? 'var(--amber)' : 'transparent'"
+                      [style.color]="row1Type === 'time' ? '#000' : 'var(--text-secondary)'"
+                      style="border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">⏰
+                      Hora</button>
+                    <button type="button" (click)="row1Type = 'hourmeter'"
+                      [style.background]="row1Type === 'hourmeter' ? 'var(--amber)' : 'transparent'"
+                      [style.color]="row1Type === 'hourmeter' ? '#000' : 'var(--text-secondary)'"
+                      style="border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">📟
+                      Horómetro</button>
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="endHourmeter">{{ row1Type === 'time' ? 'Final (Hora)' : 'Final
-                    (Número)' }}</label>
-                  <input *ngIf="row1Type === 'time'" id="endHourmeter" type="time" class="form-input"
-                    [(ngModel)]="newConduce.endHourmeter" name="endHourmeter" required />
-                  <input *ngIf="row1Type === 'hourmeter'" id="endHourmeter" type="number" step="0.1" class="form-input"
-                    [(ngModel)]="newConduce.endHourmeter" name="endHourmeter" placeholder="Ej: 1030.0" required />
-                </div>
-              </div>
 
-              <!-- Fila 2: Tiempos de Reloj -->
-              <div class="form-grid-2 mb-4">
-                <div class="form-group">
-                  <label class="form-label" for="shift2Start">Tiempo de</label>
-                  <input id="shift2Start" type="time" class="form-input" [(ngModel)]="newConduce.shift2Start"
-                    name="shift2Start" />
+                <!-- Fila 1: Horómetro / Hora -->
+                <div class="form-grid-2 mb-3">
+                  <div class="form-group">
+                    <label class="form-label" for="startHourmeter">{{ row1Type === 'time' ? 'Inicio Horómetro (Hora)' :
+                      'Inicio Horómetro (Número)' }}</label>
+                    <input *ngIf="row1Type === 'time'" id="startHourmeter" type="time" class="form-input"
+                      [(ngModel)]="newConduce.startHourmeter" name="startHourmeter" required />
+                    <input *ngIf="row1Type === 'hourmeter'" id="startHourmeter" type="number" step="0.1"
+                      class="form-input" [(ngModel)]="newConduce.startHourmeter" name="startHourmeter"
+                      placeholder="Ej: 1024.5" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="endHourmeter">{{ row1Type === 'time' ? 'Final (Hora)' : 'Final
+                      (Número)' }}</label>
+                    <input *ngIf="row1Type === 'time'" id="endHourmeter" type="time" class="form-input"
+                      [(ngModel)]="newConduce.endHourmeter" name="endHourmeter" required />
+                    <input *ngIf="row1Type === 'hourmeter'" id="endHourmeter" type="number" step="0.1" class="form-input"
+                      [(ngModel)]="newConduce.endHourmeter" name="endHourmeter" placeholder="Ej: 1030.0" required />
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="shift2End">y de</label>
-                  <input id="shift2End" type="time" class="form-input" [(ngModel)]="newConduce.shift2End"
-                    name="shift2End" />
+
+                <!-- Fila 2: Tiempos de Reloj -->
+                <div class="form-grid-2 mb-4">
+                  <div class="form-group">
+                    <label class="form-label" for="shift2Start">Tiempo de</label>
+                    <input id="shift2Start" type="time" class="form-input" [(ngModel)]="newConduce.shift2Start"
+                      name="shift2Start" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="shift2End">y de</label>
+                    <input id="shift2End" type="time" class="form-input" [(ngModel)]="newConduce.shift2End"
+                      name="shift2End" />
+                  </div>
                 </div>
               </div>
 
               <!-- Fila 3: Resultado de cálculo -->
-              <div class="form-group">
-                <label class="form-label">Horas Totales</label>
+              <div class="form-group mt-3">
+                <label class="form-label">{{ getSelectedVehicle()?.deviceType === 'Camión Volteo' ? 'M³ Totales Transportados' : 'Horas Totales' }}</label>
                 <div class="calculated-value"
                   style="font-size: 1.3rem; border: 1.5px dashed var(--amber); color: var(--amber); background: rgba(245,158,11,0.08); font-weight: 700; text-align: center; padding: 12px; border-radius: 8px;">
-                  {{ calculateFrontendTotalHours() | number:'1.1-2' }} hrs
+                  {{ calculateFrontendTotalHours() | number:'1.1-2' }} {{ getSelectedVehicle()?.deviceType === 'Camión Volteo' ? 'm³' : 'hrs' }}
                 </div>
               </div>
             </div>
@@ -567,7 +609,7 @@
                   <th>Fecha</th>
                   <th>Cliente</th>
                   <th>Equipo</th>
-                  <th>Horas</th>
+                  <th>Horas / Vol.</th>
                   <th>Total</th>
                   <th *ngIf="authService.currentUser()?.role?.name === 'admin'" style="text-align: center;">Acciones
                   </th>
@@ -582,7 +624,7 @@
                     <small class="text-secondary">{{ order.project }}</small>
                   </td>
                   <td data-label="Equipo">{{ order.vehicle?.deviceName || 'Desconocido' }}</td>
-                  <td data-label="Horas">{{ order.totalHours }} hrs</td>
+                  <td data-label="Horas">{{ order.totalHours }} {{ order.registerType === 'trips' ? 'm³' : 'hrs' }}</td>
                   <td data-label="Total"><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString()
                       }}</strong></td>
                   <td *ngIf="authService.currentUser()?.role?.name === 'admin'" data-label="Acciones"
@@ -1048,16 +1090,21 @@
                   name="plateNumber" placeholder="P-XXXXXX" />
               </div>
             </div>
-            <div class="form-grid-2">
+             <div class="form-grid-2">
               <div class="form-group">
-                <label class="form-label" for="vehHourlyRate">Tarifa por Hora (RD$)</label>
+                <label class="form-label" for="vehHourlyRate">{{ newVehicle.deviceType === 'Camión Volteo' ? 'Precio por m³ (RD$)' : 'Tarifa por Hora (RD$)' }}</label>
                 <input id="vehHourlyRate" type="number" class="form-input" [(ngModel)]="newVehicle.hourlyRate"
                   name="hourlyRate" placeholder="Ej: 3000" required />
               </div>
-              <div class="form-group">
+              <div class="form-group" *ngIf="newVehicle.deviceType !== 'Camión Volteo'">
                 <label class="form-label" for="vehCurrentHourmeter">Horómetro Inicial (hrs)</label>
                 <input id="vehCurrentHourmeter" type="number" step="0.1" class="form-input"
                   [(ngModel)]="newVehicle.currentHourmeter" name="currentHourmeter" placeholder="Ej: 1500" />
+              </div>
+              <div class="form-group" *ngIf="newVehicle.deviceType === 'Camión Volteo'">
+                <label class="form-label" for="vehCapacity">Capacidad del Camión (m³)</label>
+                <input id="vehCapacity" type="number" step="0.1" class="form-input"
+                  [(ngModel)]="newVehicle.capacity" name="capacity" placeholder="Ej: 10.0" required />
               </div>
             </div>
             <div class="form-group">
@@ -1092,8 +1139,8 @@
                   <td data-label="Equipo"><strong>{{ v.deviceName }}</strong><br><small class="text-secondary">{{
                       v.plateNumber || 'Sin Placa' }}</small></td>
                   <td data-label="Tipo">{{ v.deviceType }}</td>
-                  <td data-label="Tarifa/Hora">RD$ {{ v.hourlyRate.toLocaleString() }}</td>
-                  <td data-label="Horómetro">{{ v.currentHourmeter }} hrs</td>
+                  <td data-label="Tarifa/Hora">RD$ {{ v.hourlyRate.toLocaleString() }}{{ v.deviceType === 'Camión Volteo' ? ' / m³' : ' / hr' }}</td>
+                  <td data-label="Horómetro">{{ v.deviceType === 'Camión Volteo' ? v.capacity + ' m³' : v.currentHourmeter + ' hrs' }}</td>
                   <td data-label="Acciones" style="text-align: center;">
                     <div style="display: flex; gap: 8px; justify-content: center;">
                       <button (click)="startEditVehicle(v)" class="btn-action-edit" title="Editar"

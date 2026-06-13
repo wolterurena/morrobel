@@ -20,6 +20,9 @@ export class Vehicle {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   hourlyRate: number; // Tarifa de cobro por hora (RD$)
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  capacity: number; // Capacidad del camión en m³
+
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   currentHourmeter: number; // Horómetro actual de la máquina
 

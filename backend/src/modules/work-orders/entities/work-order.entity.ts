@@ -45,6 +45,12 @@ export class WorkOrder {
   @Column({ type: 'decimal', precision: 8, scale: 2, default: 0 })
   totalHours: number; // Horas Totales trabajadas (ej. 11.5)
 
+  @Column({ type: 'integer', default: 0, nullable: true })
+  trips: number; // Número de viajes realizados
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
+  capacity: number; // Snapshot de capacidad al registrar conduce
+
   @Column({ type: 'decimal', precision: 8, scale: 2, default: 0 })
   oil: number; // Combustibles y Lubricantes: Aceite
 

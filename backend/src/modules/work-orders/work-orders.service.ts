@@ -30,8 +30,31 @@ function parseValue(val: any): { isTime: boolean; value: number; timeStr: string
 }
 
 function calculateHoursFromData(data: any): { totalHours: number; processed: any } {
-  const startObj = parseValue(data.startHourmeter);
-  const endObj = parseValue(data.endHourmeter);
+  if (data.registerType === 'trips') {
+    const capacity = Number(data.capacity || 0);
+    const trips = Number(data.trips || 0);
+    return {
+      totalHours: Number((capacity * trips).toFixed(2)),
+      processed: {
+        shift1Start: null,
+        shift1End: null,
+        startHourmeter: 0,
+        endHourmeter: 0,
+        shift2Start: null,
+        shift2End: null,
+        registerType: 'trips',
+        trips,
+        capacity
+      }
+    };
+  }
+
+  const isClockSaved = data.registerType === 'clock';
+  const startVal = isClockSaved ? data.shift1Start : data.startHourmeter;
+  const endVal = isClockSaved ? data.shift1End : data.endHourmeter;
+
+  const startObj = parseValue(startVal);
+  const endObj = parseValue(endVal);
   
   let part1Diff = 0;
   let isClockPart1 = false;
@@ -109,7 +132,13 @@ export class WorkOrdersService {
       throw new BadRequestException('Vehículo no encontrado.');
     }
 
-    const calc = calculateHoursFromData(data);
+    const isTruck = vehicle.deviceType === 'Camión Volteo';
+    const calc = calculateHoursFromData({
+      ...data,
+      registerType: isTruck ? 'trips' : data.registerType,
+      capacity: isTruck ? vehicle.capacity : 0,
+      trips: isTruck ? data.trips : 0
+    });
     
     // Auto-generar número de conduce secuencial si no se suministra
     if (!data.conduceNumber) {
@@ -128,6 +157,8 @@ export class WorkOrdersService {
       startHourmeter: calc.processed.startHourmeter,
       endHourmeter: calc.processed.endHourmeter,
       registerType: calc.processed.registerType,
+      trips: calc.processed.trips,
+      capacity: calc.processed.capacity,
       hourlyRate: 0,
       totalAmount: 0,
       status: 'pending',
@@ -171,6 +202,8 @@ export class WorkOrdersService {
     workOrder.startHourmeter = calc.processed.startHourmeter;
     workOrder.endHourmeter = calc.processed.endHourmeter;
     workOrder.registerType = calc.processed.registerType;
+    workOrder.trips = calc.processed.trips;
+    workOrder.capacity = calc.processed.capacity;
     workOrder.hourlyRate = hourlyRate;
     workOrder.totalAmount = totalAmount;
     workOrder.status = 'approved';
@@ -179,9 +212,12 @@ export class WorkOrdersService {
 
     // Actualizar horómetro de la máquina en la base de datos de manera definitiva
     // Si es de reloj, le sumamos las horas trabajadas. Si es de horómetro, reemplazamos por el valor final.
+    // Si es de viajes, no modificamos el horómetro.
     const newHourmeter = workOrder.registerType === 'clock'
       ? Number(vehicle.currentHourmeter || 0) + calc.totalHours
-      : Number(workOrder.endHourmeter || 0);
+      : workOrder.registerType === 'trips'
+        ? Number(vehicle.currentHourmeter || 0)
+        : Number(workOrder.endHourmeter || 0);
 
     await this.vehiclesService.update(vehicle.id, {
       currentHourmeter: newHourmeter,

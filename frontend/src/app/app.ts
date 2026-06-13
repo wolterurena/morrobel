@@ -83,6 +83,8 @@ export class App implements OnInit {
     shift1End: '',
     shift2Start: '',
     shift2End: '',
+    trips: 0,
+    capacity: 0,
     oil: 0,
     gasoil: 0,
     gasoline: 0,
@@ -110,6 +112,7 @@ export class App implements OnInit {
     deviceType: 'Retropala',
     plateNumber: '',
     hourlyRate: 0,
+    capacity: 0,
     currentHourmeter: 0,
     imei: ''
   };
@@ -507,6 +510,8 @@ export class App implements OnInit {
       shift1End: '',
       shift2Start: '',
       shift2End: '',
+      trips: 0,
+      capacity: 0,
       oil: 0,
       gasoil: 0,
       gasoline: 0,
@@ -693,6 +698,7 @@ export class App implements OnInit {
           deviceType: 'Retropala',
           plateNumber: '',
           hourlyRate: 0,
+          capacity: 0,
           currentHourmeter: 0,
           imei: ''
         };
@@ -725,6 +731,7 @@ export class App implements OnInit {
       deviceType: v.deviceType,
       plateNumber: v.plateNumber || '',
       hourlyRate: v.hourlyRate,
+      capacity: v.capacity || 0,
       currentHourmeter: v.currentHourmeter || 0,
       imei: v.imei || ''
     };
@@ -739,6 +746,7 @@ export class App implements OnInit {
       deviceType: 'Retropala',
       plateNumber: '',
       hourlyRate: 0,
+      capacity: 0,
       currentHourmeter: 0,
       imei: ''
     };
@@ -1049,7 +1057,18 @@ export class App implements OnInit {
     return { isTime: false, value: isNaN(num) ? 0 : num, timeStr: '' };
   }
 
+  getSelectedVehicle() {
+    return this.vehicles().find(v => v.id === this.newConduce.vehicleId);
+  }
+
   calculateFrontendTotalHours(): number {
+    const vehicle = this.vehicles().find(v => v.id === this.newConduce.vehicleId);
+    if (vehicle && vehicle.deviceType === 'Camión Volteo') {
+      const cap = Number(vehicle.capacity || 0);
+      const trips = Number(this.newConduce.trips || 0);
+      return Number((cap * trips).toFixed(2));
+    }
+
     const startObj = this.parseValue(this.newConduce.startHourmeter);
     const endObj = this.parseValue(this.newConduce.endHourmeter);
 
