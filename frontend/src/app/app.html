@@ -1,0 +1,1142 @@
+<!-- LOGIN SCREEN -->
+<div *ngIf="!authService.isLoggedIn()" class="login-wrapper animate-fade-in">
+  <div class="login-card card-glass">
+    <div class="login-header">
+      <div class="logo-icon">🚜</div>
+      <h2>EQUIPO PESADO MORROBEL</h2>
+      <p>Sistema de Ingresos y Gastos en Tiempo Real</p>
+    </div>
+
+    <form (submit)="onLogin(); $event.preventDefault()">
+      <div class="form-group">
+        <label class="form-label" for="username">Usuario</label>
+        <input id="username" type="text" class="form-input" [(ngModel)]="loginUsername" name="username"
+          placeholder="Ej: admin o chequeador" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Contraseña</label>
+        <input id="password" type="password" class="form-input" [(ngModel)]="loginPassword" name="password"
+          placeholder="Ingrese su clave" required />
+      </div>
+
+      <div class="error-msg" *ngIf="loginError">
+        ⚠️ {{ loginError }}
+      </div>
+
+      <button type="submit" class="btn-primary w-full">Ingresar al Sistema</button>
+    </form>
+
+    <div class="login-footer">
+      <p>Credenciales de prueba:</p>
+      <code>admin / admin</code> (Administrador)<br>
+      <code>chequeador / 123</code> (Chequeador)<br>
+      <code>cuco / 123</code> (Operador: Cuco)
+    </div>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD LAYOUT -->
+<div *ngIf="authService.isLoggedIn()" class="dashboard-wrapper animate-fade-in">
+  <!-- SIDEBAR -->
+  <aside class="sidebar card-glass">
+    <div class="brand">
+      <span class="brand-logo">🚜</span>
+      <div class="brand-text">
+        <h3>MORROBEL</h3>
+        <span>Equipos Pesados</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button *ngIf="authService.currentUser()?.role !== 'operator' && isModuleEnabled('dashboard')"
+        [class.active]="activeTab() === 'dashboard'" (click)="activeTab.set('dashboard')" class="nav-item">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+
+      <button *ngIf="isModuleEnabled('conduces')" [class.active]="activeTab() === 'conduces'"
+        (click)="activeTab.set('conduces')" class="nav-item">
+        <span class="nav-icon">📝</span> Registro Conduces
+      </button>
+
+      <button *ngIf="authService.currentUser()?.role !== 'operator' && isModuleEnabled('gastos')"
+        [class.active]="activeTab() === 'gastos'" (click)="activeTab.set('gastos')" class="nav-item">
+        <span class="nav-icon">💵</span> Registro Egresos
+      </button>
+
+      <button *ngIf="authService.currentUser()?.role !== 'operator' && isModuleEnabled('reportes')"
+        [class.active]="activeTab() === 'reportes'" (click)="activeTab.set('reportes')" class="nav-item">
+        <span class="nav-icon">📈</span> Reportes Financieros
+      </button>
+
+      <button *ngIf="authService.currentUser()?.role === 'admin'" [class.active]="activeTab() === 'config'"
+        (click)="activeTab.set('config')" class="nav-item">
+        <span class="nav-icon">⚙️</span> Configuración
+      </button>
+    </nav>
+
+    <div class="user-info">
+      <div class="user-avatar">{{ (authService.currentUser()?.name || 'U')[0] }}</div>
+      <div class="user-details">
+        <p class="user-name">{{ authService.currentUser()?.name }}</p>
+        <span class="badge" [class.badge-success]="authService.currentUser()?.role === 'admin'"
+          [class.badge-warning]="authService.currentUser()?.role === 'checker'"
+          [class.badge-danger]="authService.currentUser()?.role === 'operator'">
+          {{ authService.currentUser()?.role }}
+        </span>
+      </div>
+      <button class="btn-logout" (click)="onLogout()" title="Cerrar Sesión">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; display: block;">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <!-- HEADER -->
+    <header class="content-header card-glass">
+      <div class="header-title">
+        <h2>{{ activeTab() | uppercase }}</h2>
+        <p>Control financiero de operaciones de movimiento de tierra</p>
+      </div>
+
+      <div class="connection-status" style="display: flex; align-items: center; gap: 15px;">
+        <!-- Indicador de cola offline -->
+        <span *ngIf="offlineQueue().length > 0" class="badge"
+          style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 600; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+          ⏳ {{ offlineQueue().length }} Conduce(s) offline pendientes
+        </span>
+
+        <span class="status-indicator" [class.connected]="socketService.isConnected()"></span>
+        <span class="status-text">{{ socketService.isConnected() ? 'GPS Sockets Activo' : 'Conectando...' }}</span>
+
+        <button class="btn-sync" (click)="triggerProtrackSync()" title="Forzar Sincronización Protrack API">
+          🔄 Sincronizar Protrack
+        </button>
+      </div>
+    </header>
+
+    <!-- TAB 1: DASHBOARD -->
+    <section *ngIf="activeTab() === 'dashboard'" class="tab-pane animate-fade-in">
+      <!-- STATS GRID -->
+      <div class="stats-grid">
+        <div class="stat-card card-glass border-amber">
+          <div class="stat-icon bg-amber">💵</div>
+          <div class="stat-info">
+            <span>Ingresos Totales</span>
+            <h3>RD$ {{ totalIncome().toLocaleString() }}</h3>
+            <p>Horas facturadas: {{ totalHoursWorked().toLocaleString() }} hrs</p>
+          </div>
+        </div>
+
+        <div class="stat-card card-glass border-red">
+          <div class="stat-icon bg-red">💸</div>
+          <div class="stat-info">
+            <span>Egresos Totales</span>
+            <h3>RD$ {{ totalExpenses().toLocaleString() }}</h3>
+            <p>Combustible, mecánica y anticipos</p>
+          </div>
+        </div>
+
+        <div class="stat-card card-glass border-green">
+          <div class="stat-icon bg-green">📈</div>
+          <div class="stat-info">
+            <span>Ganancia Neta</span>
+            <h3>RD$ {{ totalProfit().toLocaleString() }}</h3>
+            <p>Margen de rentabilidad activo</p>
+          </div>
+        </div>
+
+        <div class="stat-card card-glass border-blue">
+          <div class="stat-icon bg-blue">🚜</div>
+          <div class="stat-info">
+            <span>Maquinaria Activa</span>
+            <h3>{{ vehicles().length }} Equipos</h3>
+            <p>Simulación GPS en tiempo real</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN DASHBOARD CONTENT -->
+      <div class="dashboard-content-grid">
+        <!-- VIRTUAL MAP PANEL -->
+        <div *ngIf="isModuleEnabled('vehiculos')" class="map-panel card-glass">
+          <div class="panel-header">
+            <h3>🗺️ Monitoreo GPS en Tiempo Real (Las Matas de Santa Cruz)</h3>
+            <span class="badge badge-success">GPS Simulador</span>
+          </div>
+
+          <div class="virtual-map">
+            <!-- Representación visual tipo radar/rejilla GPS -->
+            <svg width="100%" height="100%" viewBox="0 0 500 300" class="radar-svg">
+              <defs>
+                <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                  <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" />
+                </pattern>
+                <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.1" />
+                  <stop offset="100%" stop-color="var(--primary)" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+              <!-- Cuadrícula -->
+              <rect width="100%" height="100%" fill="url(#grid)" />
+
+              <!-- Círculos de radar -->
+              <circle cx="250" cy="150" r="80" fill="none" stroke="rgba(245, 158, 11, 0.08)" stroke-dasharray="5,5" />
+              <circle cx="250" cy="150" r="140" fill="none" stroke="rgba(245, 158, 11, 0.04)" />
+
+              <!-- Calles imaginarias de Las Matas -->
+              <path d="M 50 150 L 450 150" stroke="rgba(255, 255, 255, 0.08)" stroke-width="4" />
+              <path d="M 250 30 L 250 270" stroke="rgba(255, 255, 255, 0.08)" stroke-width="4" />
+              <text x="60" y="140" fill="rgba(255,255,255,0.2)" font-size="8">Calle Pedro Antonio Pimentel</text>
+
+              <!-- Vehículos en movimiento -->
+              <g *ngFor="let v of vehicles(); let i = index">
+                <!-- Convertir lat/long relativos a coordenadas del plano SVG 500x300 -->
+                <!-- Rango lat: 19.660 a 19.675 -> 0 a 300 vertical -->
+                <!-- Rango long: -71.510 a -71.490 -> 0 a 500 horizontal -->
+                <circle [attr.cx]="250 + (v.longitude + 71.500) * 15000" [attr.cy]="150 - (v.latitude - 19.667) * 15000"
+                  r="12" [attr.fill]="v.ignition ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'"
+                  [attr.stroke]="v.ignition ? 'var(--success)' : 'var(--danger)'" stroke-width="2" class="radar-ping" />
+
+                <!-- Punto central -->
+                <circle [attr.cx]="250 + (v.longitude + 71.500) * 15000" [attr.cy]="150 - (v.latitude - 19.667) * 15000"
+                  r="5" [attr.fill]="v.ignition ? 'var(--success)' : 'var(--danger)'" />
+
+                <!-- Nombre sobre el punto -->
+                <text [attr.x]="250 + (v.longitude + 71.500) * 15000 + 15"
+                  [attr.y]="150 - (v.latitude - 19.667) * 15000 + 4" fill="var(--text-primary)" font-size="10"
+                  font-weight="600">
+                  {{ v.deviceName.split(' ')[0] }} ({{ v.speed }} km/h)
+                </text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- VIRTUAL MAP PANEL (DESACTIVADO) -->
+        <div *ngIf="!isModuleEnabled('vehiculos')" class="map-panel card-glass"
+          style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; min-height: 380px;">
+          <div style="font-size: 3.5rem; margin-bottom: 20px;">🗺️</div>
+          <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary);">Monitoreo GPS Apagado</h3>
+          <p class="text-secondary" style="margin-top: 10px; max-width: 320px;">El módulo de visualización y
+            posicionamiento en tiempo real se encuentra desactivado temporalmente.</p>
+          <span *ngIf="authService.currentUser()?.role === 'admin'" class="badge badge-warning"
+            style="margin-top: 20px; font-weight: 600;">
+            Reactívelo en la pestaña de Configuración ⚙️
+          </span>
+        </div>
+
+        <!-- MACHINERY LIST PANEL -->
+        <div class="vehicles-panel card-glass">
+          <div class="panel-header">
+            <h3>🚜 Estado de Maquinaria</h3>
+          </div>
+
+          <div class="vehicle-list">
+            <div *ngFor="let v of vehicles()" class="vehicle-item-card">
+              <div class="vehicle-icon" [class.active]="v.ignition">🚜</div>
+              <div class="vehicle-info">
+                <h4>{{ v.deviceName }}</h4>
+                <p>Placa: {{ v.plateNumber || 'N/A' }} | Horómetro: <strong>{{ v.currentHourmeter }} hrs</strong></p>
+                <div class="gps-coords">
+                  📍 Lat: {{ v.latitude | number:'1.5-5' }} | Long: {{ v.longitude | number:'1.5-5' }}
+                </div>
+              </div>
+              <div class="vehicle-status">
+                <span class="badge" [class.badge-success]="v.ignition" [class.badge-danger]="!v.ignition">
+                  {{ v.ignition ? 'IGN ON' : 'IGN OFF' }}
+                </span>
+                <span class="speed-indicator" *ngIf="v.ignition">{{ v.speed }} KM/H</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: CONDUCES (REGISTRO TRABAJOS) -->
+    <section *ngIf="activeTab() === 'conduces'" class="tab-pane animate-fade-in">
+      <!-- Pendientes de revisión (Solo Administrador) -->
+      <div *ngIf="authService.currentUser()?.role === 'admin' && pendingWorkOrders().length > 0" class="mb-4">
+        <h3>📋 Conduces Pendientes de Revisión</h3>
+        <p class="section-desc">Revise los conduces ingresados por los chequeadores para que el sistema calcule los
+          montos automáticos e incremente los horómetros.</p>
+        <div class="pending-reviews-container mt-4">
+          <div *ngFor="let order of pendingWorkOrders()" class="pending-card animate-fade-in">
+            <div class="pending-card-header">
+              <div>
+                <span class="pending-card-title">Conduce #{{ order.conduceNumber }}</span>
+                <span class="badge badge-warning" style="margin-left: 10px;">Pendiente de Aprobación</span>
+              </div>
+            </div>
+            <div class="pending-card-body">
+              <div class="pending-detail-item">
+                <span>Cliente</span>
+                <strong>{{ order.client }}</strong>
+              </div>
+              <div class="pending-detail-item">
+                <span>Proyecto</span>
+                <strong>{{ order.project || 'N/A' }}</strong>
+              </div>
+              <div class="pending-detail-item">
+                <span>Máquina / Equipo</span>
+                <strong>{{ order.vehicle?.deviceName || 'Desconocido' }}</strong>
+              </div>
+              <div class="pending-detail-item">
+                <span>Operador</span>
+                <strong>{{ order.operatorNameRaw }}</strong>
+              </div>
+
+              <!-- Mostrar por Horómetro -->
+              <ng-container *ngIf="order.registerType !== 'clock'">
+                <div class="pending-detail-item">
+                  <span>Horómetro Inicial</span>
+                  <strong>{{ order.startHourmeter }} hrs</strong>
+                </div>
+                <div class="pending-detail-item">
+                  <span>Horómetro Final</span>
+                  <strong>{{ order.endHourmeter }} hrs</strong>
+                </div>
+              </ng-container>
+
+              <!-- Mostrar por Reloj/Turnos -->
+              <ng-container *ngIf="order.registerType === 'clock'">
+                <div class="pending-detail-item" style="grid-column: span 2;">
+                  <span>Turnos de Reloj</span>
+                  <strong>
+                    T1: {{ order.shift1Start }} a {{ order.shift1End }}
+                    <span *ngIf="order.shift2Start"> | T2: {{ order.shift2Start }} a {{ order.shift2End }}</span>
+                  </strong>
+                </div>
+              </ng-container>
+
+              <div class="pending-detail-item">
+                <span>Horas Calculadas</span>
+                <strong>{{ order.totalHours | number:'1.1-2' }} hrs</strong>
+              </div>
+              <div class="pending-detail-item">
+                <span>Lubricantes Suministrados</span>
+                <strong>Aceite: {{ order.oil || 0 }}g | Gasoil: {{ order.gasoil || 0 }}g | Gasolina: {{ order.gasoline
+                  || 0 }}g</strong>
+              </div>
+            </div>
+            <div *ngIf="order.others" style="margin-bottom: 15px; color: var(--text-secondary);">
+              <small><strong>Observaciones:</strong> {{ order.others }}</small>
+            </div>
+            <div *ngIf="order.checkerSignature" class="pending-signature-box"
+              style="margin-top: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px solid var(--border-glass); display: inline-block;">
+              <span style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px;">✍️
+                Firma del Chequeador:</span>
+              <img [src]="order.checkerSignature" style="max-height: 60px; object-fit: contain; display: block;"
+                alt="Firma del Chequeador" />
+            </div>
+            <div class="pending-card-actions">
+              <button class="btn-approve" (click)="approveWorkOrder(order.id)">
+                ✔️ Aprobar y Calcular RD$
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <!-- FORM (Solo Operador) -->
+        <div *ngIf="authService.currentUser()?.role === 'operator'" class="form-container-panel card-glass">
+          <h3>📝 Registrar Conduce Físico (Jornada)</h3>
+
+          <div *ngIf="offlineQueue().length > 0"
+            style="margin-top: 10px; margin-bottom: 20px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--amber); padding: 12px 16px; border-radius: 8px; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; animation: pulse 2s infinite;">
+            ⚠️ Tienes <strong>{{ offlineQueue().length }} conduce(s) guardado(s) localmente</strong> sin internet. Se
+            subirán al servidor de forma automática cuando vuelvas a tener señal de red.
+          </div>
+
+          <p class="section-desc">Ingrese las horas de horómetro y combustibles para facturación</p>
+
+          <form (submit)="submitConduce(); $event.preventDefault()" class="mt-4">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="conduceNumber">No. Conduce (Generado Automáticamente)</label>
+                <input id="conduceNumber" type="text" class="form-input"
+                  [value]="newConduce.conduceNumber || nextConduceNumber()" name="conduceNumber" readonly />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="date">Fecha</label>
+                <input id="date" type="date" class="form-input" [(ngModel)]="newConduce.date" name="date" required />
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="client">Cliente</label>
+                <input id="client" type="text" class="form-input" [(ngModel)]="newConduce.client" name="client"
+                  placeholder="Ej: CAZAPOR AUTO SERVICIOS" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="project">Proyecto</label>
+                <input id="project" type="text" class="form-input" [(ngModel)]="newConduce.project" name="project"
+                  placeholder="Ej: Corte de Piso" />
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="vehicleSelect">Máquina / Equipo</label>
+                <select id="vehicleSelect" class="form-select" [(ngModel)]="newConduce.vehicleId" name="vehicleId"
+                  required>
+                  <option value="" disabled>Seleccione un equipo</option>
+                  <option *ngFor="let v of vehicles()" [value]="v.id">{{ v.deviceName }} (Tarifa: RD$ {{ v.hourlyRate
+                    }}/h)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="operatorNameRaw">Operador (Nombre)</label>
+                <!-- Si es operador logueado, mostrar su nombre directamente -->
+                <input *ngIf="authService.currentUser()?.role === 'operator'" type="text" class="form-input"
+                  [value]="authService.currentUser()?.name" readonly />
+                <!-- Si es administrador o chequeador, permitir seleccionar de la lista -->
+                <select *ngIf="authService.currentUser()?.role !== 'operator'" id="operatorNameRaw" class="form-select"
+                  [(ngModel)]="newConduce.operatorNameRaw" name="operatorNameRaw" required>
+                  <option value="" disabled>Seleccione el operador</option>
+                  <option *ngFor="let op of operators()" [value]="op.name">{{ op.name }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- REGISTRO DE JORNADA (HORAS) -->
+            <div
+              style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-glass); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin: 0; color: var(--primary);">⏱️ Registro de Jornada / Horas</h4>
+                <div
+                  style="display: flex; gap: 5px; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px;">
+                  <button type="button" (click)="row1Type = 'time'"
+                    [style.background]="row1Type === 'time' ? 'var(--amber)' : 'transparent'"
+                    [style.color]="row1Type === 'time' ? '#000' : 'var(--text-secondary)'"
+                    style="border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">⏰
+                    Hora</button>
+                  <button type="button" (click)="row1Type = 'hourmeter'"
+                    [style.background]="row1Type === 'hourmeter' ? 'var(--amber)' : 'transparent'"
+                    [style.color]="row1Type === 'hourmeter' ? '#000' : 'var(--text-secondary)'"
+                    style="border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">📟
+                    Horómetro</button>
+                </div>
+              </div>
+
+              <!-- Fila 1: Horómetro / Hora -->
+              <div class="form-grid-2 mb-3">
+                <div class="form-group">
+                  <label class="form-label" for="startHourmeter">{{ row1Type === 'time' ? 'Inicio Horómetro (Hora)' :
+                    'Inicio Horómetro (Número)' }}</label>
+                  <input *ngIf="row1Type === 'time'" id="startHourmeter" type="time" class="form-input"
+                    [(ngModel)]="newConduce.startHourmeter" name="startHourmeter" required />
+                  <input *ngIf="row1Type === 'hourmeter'" id="startHourmeter" type="number" step="0.1"
+                    class="form-input" [(ngModel)]="newConduce.startHourmeter" name="startHourmeter"
+                    placeholder="Ej: 1024.5" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="endHourmeter">{{ row1Type === 'time' ? 'Final (Hora)' : 'Final
+                    (Número)' }}</label>
+                  <input *ngIf="row1Type === 'time'" id="endHourmeter" type="time" class="form-input"
+                    [(ngModel)]="newConduce.endHourmeter" name="endHourmeter" required />
+                  <input *ngIf="row1Type === 'hourmeter'" id="endHourmeter" type="number" step="0.1" class="form-input"
+                    [(ngModel)]="newConduce.endHourmeter" name="endHourmeter" placeholder="Ej: 1030.0" required />
+                </div>
+              </div>
+
+              <!-- Fila 2: Tiempos de Reloj -->
+              <div class="form-grid-2 mb-4">
+                <div class="form-group">
+                  <label class="form-label" for="shift2Start">Tiempo de</label>
+                  <input id="shift2Start" type="time" class="form-input" [(ngModel)]="newConduce.shift2Start"
+                    name="shift2Start" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="shift2End">y de</label>
+                  <input id="shift2End" type="time" class="form-input" [(ngModel)]="newConduce.shift2End"
+                    name="shift2End" />
+                </div>
+              </div>
+
+              <!-- Fila 3: Resultado de cálculo -->
+              <div class="form-group">
+                <label class="form-label">Horas Totales</label>
+                <div class="calculated-value"
+                  style="font-size: 1.3rem; border: 1.5px dashed var(--amber); color: var(--amber); background: rgba(245,158,11,0.08); font-weight: 700; text-align: center; padding: 12px; border-radius: 8px;">
+                  {{ calculateFrontendTotalHours() | number:'1.1-2' }} hrs
+                </div>
+              </div>
+            </div>
+
+            <h4 class="mt-4 mb-2">Lubricantes y Combustibles Suministrados</h4>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label class="form-label" for="oil">Aceite (Gals)</label>
+                <input id="oil" type="number" step="0.1" class="form-input" [(ngModel)]="newConduce.oil" name="oil" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="gasoil">Gasoil (Gals)</label>
+                <input id="gasoil" type="number" step="0.1" class="form-input" [(ngModel)]="newConduce.gasoil"
+                  name="gasoil" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="gasoline">Gasolina (Gals)</label>
+                <input id="gasoline" type="number" step="0.1" class="form-input" [(ngModel)]="newConduce.gasoline"
+                  name="gasoline" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="others">Otros / Observaciones</label>
+              <textarea id="others" class="form-textarea" [(ngModel)]="newConduce.others" name="others" rows="2"
+                placeholder="Detalle adicional..."></textarea>
+            </div>
+
+            <!-- FIRMA DIGITAL -->
+            <div class="form-group mb-4">
+              <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                Firma del Chequeador (De Acuerdo)
+                <button type="button" (click)="clearSignature()"
+                  style="background: transparent; border: none; color: var(--amber); font-size: 0.85rem; cursor: pointer; text-decoration: underline; padding: 0;">Limpiar
+                  Firma</button>
+              </label>
+              <div class="signature-pad-container"
+                style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border-glass); border-radius: 8px; overflow: hidden; height: 120px; position: relative;">
+                <canvas id="signatureCanvas" width="400" height="120"
+                  style="width: 100%; height: 100%; cursor: crosshair; display: block;"
+                  (mousedown)="startDrawing($event)" (mousemove)="draw($event)" (mouseup)="stopDrawing()"
+                  (mouseleave)="stopDrawing()" (touchstart)="startDrawingTouch($event)" (touchmove)="drawTouch($event)"
+                  (touchend)="stopDrawing()"></canvas>
+              </div>
+            </div>
+
+            <div class="error-msg" *ngIf="conduceError">
+              ⚠️ {{ conduceError }}
+            </div>
+            <div class="success-msg" *ngIf="conduceSuccess">
+              ✅ {{ conduceSuccess }}
+            </div>
+
+            <button type="submit" class="btn-primary w-full mt-2">Guardar Conduce de Trabajo</button>
+          </form>
+        </div>
+
+        <!-- HISTORY TABLE -->
+        <div *ngIf="authService.currentUser()?.role === 'admin'" class="history-panel card-glass">
+          <h3>📋 Historial de Conduces Aprobados</h3>
+          <div class="table-container mt-4">
+            <table class="table-premium">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Equipo</th>
+                  <th>Horas</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let order of approvedWorkOrders()" class="animate-fade-in">
+                  <td><strong>#{{ order.conduceNumber }}</strong></td>
+                  <td>{{ order.date }}</td>
+                  <td>
+                    <div class="client-name">{{ order.client }}</div>
+                    <small class="text-secondary">{{ order.project }}</small>
+                  </td>
+                  <td>{{ order.vehicle?.deviceName || 'Desconocido' }}</td>
+                  <td>{{ order.totalHours }} hrs</td>
+                  <td><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString() }}</strong></td>
+                </tr>
+                <tr *ngIf="approvedWorkOrders().length === 0">
+                  <td colspan="6" class="text-center text-secondary">No se han registrado conduces aprobados todavía.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: GASTOS -->
+    <section *ngIf="activeTab() === 'gastos'" class="tab-pane animate-fade-in">
+      <div class="two-column-layout">
+        <!-- FORM -->
+        <div class="form-container-panel card-glass">
+          <h3>💵 Registrar Egreso / Gasto Directo</h3>
+          <p class="section-desc">Registre gastos de repuestos, lubricantes o préstamos al operador</p>
+
+          <form (submit)="submitExpense(); $event.preventDefault()" class="mt-4">
+            <div class="form-group">
+              <label class="form-label" for="description">Descripción / Detalle del Gasto</label>
+              <input id="description" type="text" class="form-input" [(ngModel)]="newExpense.description"
+                name="description" placeholder="Ej: Cuco prestado 7mil, Combustible 5mil" required />
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="amount">Monto (RD$)</label>
+                <input id="amount" type="number" class="form-input" [(ngModel)]="newExpense.amount" name="amount"
+                  required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="expenseDate">Fecha</label>
+                <input id="expenseDate" type="date" class="form-input" [(ngModel)]="newExpense.date" name="date"
+                  required />
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="categorySelect">Categoría</label>
+                <select id="categorySelect" class="form-select" [(ngModel)]="newExpense.category" name="category">
+                  <option value="fuel">Combustible</option>
+                  <option value="oil_change">Cambio de Aceite</option>
+                  <option value="maintenance">Mantenimiento</option>
+                  <option value="washing">Lavado de Equipo</option>
+                  <option value="advance_loan">Préstamo / Adelanto</option>
+                  <option value="other">Otro Gasto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="expenseVehicleSelect">Asociar a Máquina (Opcional)</label>
+                <select id="expenseVehicleSelect" class="form-select" [(ngModel)]="newExpense.vehicleId"
+                  name="vehicleId">
+                  <option value="">Ninguna máquina específica</option>
+                  <option *ngFor="let v of vehicles()" [value]="v.id">{{ v.deviceName }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" *ngIf="newExpense.category === 'advance_loan'">
+              <label class="form-label" for="expenseOperatorNameRaw">Nombre del Operador (Beneficiario)</label>
+              <select id="expenseOperatorNameRaw" class="form-select" [(ngModel)]="newExpense.operatorNameRaw"
+                name="operatorNameRaw" required>
+                <option value="" disabled>Seleccione el operador</option>
+                <option *ngFor="let op of operators()" [value]="op.name">{{ op.name }}</option>
+              </select>
+            </div>
+
+            <div class="error-msg" *ngIf="expenseError">
+              ⚠️ {{ expenseError }}
+            </div>
+            <div class="success-msg" *ngIf="expenseSuccess">
+              ✅ {{ expenseSuccess }}
+            </div>
+
+            <button type="submit" class="btn-primary w-full mt-2">Guardar Egreso</button>
+          </form>
+        </div>
+
+        <!-- HISTORY TABLE -->
+        <div class="history-panel card-glass">
+          <h3>📋 Historial de Egresos Recientes</h3>
+          <div class="table-container mt-4">
+            <table class="table-premium">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Categoría</th>
+                  <th>Descripción</th>
+                  <th>Máquina</th>
+                  <th>Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let exp of expenses()" class="animate-fade-in">
+                  <td>{{ exp.date }}</td>
+                  <td>
+                    <span class="badge" [class.badge-warning]="exp.category === 'fuel'"
+                      [class.badge-danger]="exp.category === 'maintenance'"
+                      [class.badge-success]="exp.category === 'advance_loan'">
+                      {{ getCategoryLabel(exp.category) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="exp-desc">{{ exp.description }}</div>
+                    <small *ngIf="exp.operatorNameRaw" class="text-secondary">Operador: {{ exp.operatorNameRaw
+                      }}</small>
+                  </td>
+                  <td>{{ exp.vehicle?.deviceName || 'General' }}</td>
+                  <td><strong class="color-red">RD$ {{ exp.amount.toLocaleString() }}</strong></td>
+                </tr>
+                <tr *ngIf="expenses().length === 0">
+                  <td colspan="5" class="text-center text-secondary">No se han registrado egresos todavía.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: REPORTES -->
+    <section *ngIf="activeTab() === 'reportes'" class="tab-pane animate-fade-in">
+      <!-- DATE RANGE / FORTNIGHT FILTER PANEL -->
+      <div class="card-glass p-6 mb-6 animate-fade-in"
+        style="border: 1px solid var(--border-glass); border-radius: 12px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
+          <div>
+            <h3 style="margin: 0; color: var(--primary); font-size: 1.3rem;">📅 Cierre de Quincena y Reportes
+              Financieros</h3>
+            <p class="section-desc" style="margin: 4px 0 0 0;">Seleccione el rango de fechas para calcular las
+              liquidaciones de operadores, ingresos de maquinarias y egresos.</p>
+          </div>
+
+          <!-- Presets Buttons -->
+          <div style="display: flex; gap: 8px;">
+            <button type="button" (click)="setFortnightPreset('1st')" class="btn-sync"
+              style="background: rgba(255,255,255,0.05); padding: 8px 14px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-glass); font-weight: 600; color: var(--text-primary); transition: all 0.2s;">1ra
+              Quincena</button>
+            <button type="button" (click)="setFortnightPreset('2nd')" class="btn-sync"
+              style="background: rgba(255,255,255,0.05); padding: 8px 14px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-glass); font-weight: 600; color: var(--text-primary); transition: all 0.2s;">2da
+              Quincena</button>
+            <button type="button" (click)="setFortnightPreset('full')" class="btn-sync"
+              style="background: rgba(255,255,255,0.05); padding: 8px 14px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-glass); font-weight: 600; color: var(--text-primary); transition: all 0.2s;">Mes
+              Completo</button>
+          </div>
+        </div>
+
+        <div
+          style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;"
+              for="reportStart">Desde:</label>
+            <input id="reportStart" type="date" class="form-input" [ngModel]="reportStartDate()"
+              (ngModelChange)="reportStartDate.set($event)" name="reportStartDate"
+              style="max-width: 160px; padding: 8px 12px; font-size: 0.9rem;" />
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;"
+              for="reportEnd">Hasta:</label>
+            <input id="reportEnd" type="date" class="form-input" [ngModel]="reportEndDate()"
+              (ngModelChange)="reportEndDate.set($event)" name="reportEndDate"
+              style="max-width: 160px; padding: 8px 12px; font-size: 0.9rem;" />
+          </div>
+
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">Período activo:</span>
+            <strong class="color-amber"
+              style="font-size: 0.9rem; background: rgba(245,158,11,0.08); padding: 6px 12px; border-radius: 6px; border: 1px dashed rgba(245,158,11,0.3);">
+              {{ reportStartDate() }} al {{ reportEndDate() }}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTERED STATS ROW -->
+      <div class="stats-grid mb-6">
+        <div class="stat-card card-glass border-amber">
+          <div class="stat-icon bg-amber">💵</div>
+          <div class="stat-info">
+            <span>Ingresos en Período</span>
+            <h3>RD$ {{ filteredTotalIncome().toLocaleString() }}</h3>
+            <p>Horas facturadas: {{ filteredTotalHours().toLocaleString() }} hrs</p>
+          </div>
+        </div>
+
+        <div class="stat-card card-glass border-red">
+          <div class="stat-icon bg-red">💸</div>
+          <div class="stat-info">
+            <span>Egresos en Período</span>
+            <h3>RD$ {{ filteredTotalExpenses().toLocaleString() }}</h3>
+            <p>Combustibles, repuestos y adelantos</p>
+          </div>
+        </div>
+
+        <div class="stat-card card-glass border-green">
+          <div class="stat-icon bg-green">📈</div>
+          <div class="stat-info">
+            <span>Ganancia Neta (Período)</span>
+            <h3 [class.color-red]="filteredNetProfit() < 0">RD$ {{ filteredNetProfit().toLocaleString() }}</h3>
+            <p>Balance de rentabilidad neto</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORT DASHBOARD GRID -->
+      <div class="report-dashboard-grid">
+        <!-- OPERATOR LIQUIDATIONS TABLE -->
+        <div class="report-card card-glass">
+          <h3>👥 Liquidación y Cierre de Operadores</h3>
+          <p class="section-desc">Listado de horas laboradas y préstamos/adelantos recibidos por cada operador en esta
+            quincena.</p>
+
+          <div class="table-container mt-4">
+            <table class="table-premium">
+              <thead>
+                <tr>
+                  <th>Operador</th>
+                  <th>Horas Trabajadas</th>
+                  <th>Adelantos / Préstamos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let op of operatorSettlements()">
+                  <td><strong>{{ op.name }}</strong></td>
+                  <td><strong class="color-amber">{{ op.hours | number:'1.1-2' }} hrs</strong></td>
+                  <td><strong class="color-red">RD$ {{ op.advances.toLocaleString() }}</strong></td>
+                </tr>
+                <tr *ngIf="operatorSettlements().length === 0">
+                  <td colspan="3" class="text-center text-secondary" style="padding: 20px;">No hay operadores
+                    registrados en este período.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PROFITABILITY BY VEHICLE -->
+        <div class="report-card card-glass">
+          <h3>📈 Rentabilidad por Maquinaria</h3>
+          <p class="section-desc">Cálculo de ingresos brutos vs egresos directos de cada máquina en el período de
+            quincena.</p>
+
+          <div class="table-container mt-4">
+            <table class="table-premium">
+              <thead>
+                <tr>
+                  <th>Equipo</th>
+                  <th>Ingreso Bruto</th>
+                  <th>Egresos Propios</th>
+                  <th>Balance Neto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of vehicles()">
+                  <td><strong>{{ v.deviceName }}</strong></td>
+                  <td>RD$ {{ getVehicleIncomeFiltered(v.id).toLocaleString() }}</td>
+                  <td>RD$ {{ getVehicleExpensesFiltered(v.id).toLocaleString() }}</td>
+                  <td>
+                    <span [class.color-green]="getVehicleIncomeFiltered(v.id) - getVehicleExpensesFiltered(v.id) >= 0"
+                      [class.color-red]="getVehicleIncomeFiltered(v.id) - getVehicleExpensesFiltered(v.id) < 0">
+                      RD$ {{ (getVehicleIncomeFiltered(v.id) - getVehicleExpensesFiltered(v.id)).toLocaleString() }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="vehicles().length === 0">
+                  <td colspan="4" class="text-center text-secondary" style="padding: 20px;">No hay maquinarias
+                    registradas.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: CONFIGURACIÓN (Solo Admin) -->
+    <section *ngIf="activeTab() === 'config' && authService.currentUser()?.role === 'admin'"
+      class="tab-pane animate-fade-in">
+
+      <!-- SUB TABS BAR -->
+      <div class="config-tabs-bar mb-6 card-glass">
+        <button [class.active]="activeConfigSubTab() === 'modules'" (click)="activeConfigSubTab.set('modules')"
+          class="config-tab-item">
+          ⚙️ Módulos
+        </button>
+        <button [class.active]="activeConfigSubTab() === 'gps'" (click)="activeConfigSubTab.set('gps')"
+          class="config-tab-item">
+          🛰️ Conexión GPS
+        </button>
+        <button [class.active]="activeConfigSubTab() === 'vehicles'" (click)="activeConfigSubTab.set('vehicles')"
+          class="config-tab-item">
+          🚜 Maquinarias
+        </button>
+        <button [class.active]="activeConfigSubTab() === 'users'" (click)="activeConfigSubTab.set('users')"
+          class="config-tab-item">
+          👥 Empleados
+        </button>
+      </div>
+
+      <!-- SUB TAB 1: MODULES -->
+      <div *ngIf="activeConfigSubTab() === 'modules'" class="card-glass p-6 animate-fade-in">
+        <h3>⚙️ Panel de Configuración de Módulos</h3>
+        <p class="section-desc mb-4">Como administrador, puede activar o desactivar módulos específicos del sistema en
+          tiempo real para todos los usuarios chequeadores y operadores.</p>
+
+        <div class="modules-config-list mt-4">
+          <div class="switch-container">
+            <div class="switch-label-wrapper">
+              <span class="switch-title">Dashboard Principal</span>
+              <span class="switch-desc">Monitoreo GPS en tiempo real y estadísticas generales.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="isModuleEnabled('dashboard')"
+                (change)="toggleModule('dashboard', !isModuleEnabled('dashboard'))">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-container">
+            <div class="switch-label-wrapper">
+              <span class="switch-title">Registro Conduces</span>
+              <span class="switch-desc">Permite a los operadores registrar jornadas de trabajo.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="isModuleEnabled('conduces')"
+                (change)="toggleModule('conduces', !isModuleEnabled('conduces'))">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-container">
+            <div class="switch-label-wrapper">
+              <span class="switch-title">Registro Egresos</span>
+              <span class="switch-desc">Habilita el ingreso de gastos operativos de combustible y mantenimiento.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="isModuleEnabled('gastos')"
+                (change)="toggleModule('gastos', !isModuleEnabled('gastos'))">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-container">
+            <div class="switch-label-wrapper">
+              <span class="switch-title">Reportes Financieros</span>
+              <span class="switch-desc">Muestra el balance por maquinaria y egresos categorizados.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="isModuleEnabled('reportes')"
+                (change)="toggleModule('reportes', !isModuleEnabled('reportes'))">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-container">
+            <div class="switch-label-wrapper">
+              <span class="switch-title">Mapa de Vehículos / GPS</span>
+              <span class="switch-desc">Activa el radar y rastreo de maquinaria en tiempo real en el Dashboard.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [checked]="isModuleEnabled('vehiculos')"
+                (change)="toggleModule('vehiculos', !isModuleEnabled('vehiculos'))">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB TAB 2: GPS CREDENTIALS -->
+      <div *ngIf="activeConfigSubTab() === 'gps'" class="card-glass p-6 animate-fade-in">
+        <h3>🛰️ Credenciales de Conexión GPS (Protrack365 API)</h3>
+        <p class="section-desc mb-4">Configure la dirección URL base y las credenciales de la cuenta de Protrack365 para
+          la sincronización periódica en tiempo real.</p>
+
+        <form (submit)="saveGpsSettings(); $event.preventDefault()">
+          <div class="form-group">
+            <label class="form-label" for="gpsBaseUrl">Dirección URL Base de la API</label>
+            <input id="gpsBaseUrl" type="url" class="form-input" [(ngModel)]="gpsSettings().baseUrl" name="baseUrl"
+              placeholder="Ej: https://api.protrack365.com" required />
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="gpsAccount">Nombre de Usuario / Cuenta</label>
+              <input id="gpsAccount" type="text" class="form-input" [(ngModel)]="gpsSettings().account" name="account"
+                placeholder="Ej: admin0" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="gpsPasswordRaw">Contraseña de la API</label>
+              <input id="gpsPasswordRaw" type="password" class="form-input" [(ngModel)]="gpsSettings().passwordRaw"
+                name="passwordRaw" placeholder="Ingrese la contraseña" required />
+            </div>
+          </div>
+
+          <div class="error-msg" *ngIf="gpsError" style="margin-top: 15px; margin-bottom: 0;">
+            ⚠️ {{ gpsError }}
+          </div>
+          <div class="success-msg" *ngIf="gpsSuccess" style="margin-top: 15px; margin-bottom: 0;">
+            ✅ {{ gpsSuccess }}
+          </div>
+
+          <button type="submit" class="btn-primary w-full mt-4">Guardar y Aplicar Credenciales</button>
+        </form>
+      </div>
+
+      <!-- SUB TAB 3: VEHICLES CRUD -->
+      <div *ngIf="activeConfigSubTab() === 'vehicles'" class="two-column-layout animate-fade-in">
+        <!-- Form -->
+        <div class="card-glass p-6">
+          <h3>🚜 {{ editingVehicle() ? 'Editar Maquinaria / Equipo Pesado' : 'Agregar Maquinaria / Equipo Pesado' }}
+          </h3>
+          <p class="section-desc">{{ editingVehicle() ? 'Actualice los datos del equipo seleccionado.' : 'Registre una
+            nueva máquina en el sistema con su tarifa horaria.' }}</p>
+          <form (submit)="submitVehicle(); $event.preventDefault()" class="mt-4">
+            <div class="form-group">
+              <label class="form-label" for="vehDeviceName">Nombre de Máquina (Ej: Tractor Cat D8)</label>
+              <input id="vehDeviceName" type="text" class="form-input" [(ngModel)]="newVehicle.deviceName"
+                name="deviceName" placeholder="Tractor Cat D8" required />
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="vehTypeSelect">Tipo de Equipo</label>
+                <select id="vehTypeSelect" class="form-select" [(ngModel)]="newVehicle.deviceType" name="deviceType">
+                  <option value="Retropala">Retropala</option>
+                  <option value="Tractor">Tractor</option>
+                  <option value="Pala Mecánica">Pala Mecánica</option>
+                  <option value="Motoniveladora">Motoniveladora</option>
+                  <option value="Camión Volteo">Camión Volteo</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="vehPlateNumber">Placa / Identificador</label>
+                <input id="vehPlateNumber" type="text" class="form-input" [(ngModel)]="newVehicle.plateNumber"
+                  name="plateNumber" placeholder="P-XXXXXX" />
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="vehHourlyRate">Tarifa por Hora (RD$)</label>
+                <input id="vehHourlyRate" type="number" class="form-input" [(ngModel)]="newVehicle.hourlyRate"
+                  name="hourlyRate" placeholder="Ej: 3000" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="vehCurrentHourmeter">Horómetro Inicial (hrs)</label>
+                <input id="vehCurrentHourmeter" type="number" step="0.1" class="form-input"
+                  [(ngModel)]="newVehicle.currentHourmeter" name="currentHourmeter" placeholder="Ej: 1500" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="vehImei">IMEI del Dispositivo GPS (Opcional)</label>
+              <input id="vehImei" type="text" class="form-input" [(ngModel)]="newVehicle.imei" name="imei"
+                placeholder="IMEI de Protrack365" />
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button type="submit" class="btn-primary w-full">{{ editingVehicle() ? 'Guardar Cambios' : 'Agregar
+                Máquina' }}</button>
+              <button *ngIf="editingVehicle()" type="button" (click)="cancelEditVehicle()" class="btn-sync"
+                style="background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-glass); font-weight: 600; color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Cancelar</button>
+            </div>
+          </form>
+        </div>
+        <!-- List -->
+        <div class="card-glass p-6">
+          <h3>📋 Maquinarias Registradas</h3>
+          <div class="table-container mt-4" style="max-height: 400px; overflow-y: auto;">
+            <table class="table-premium">
+              <thead>
+                <tr>
+                  <th>Equipo</th>
+                  <th>Tipo</th>
+                  <th>Tarifa/Hora</th>
+                  <th>Horómetro</th>
+                  <th style="text-align: center;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of vehicles()">
+                  <td><strong>{{ v.deviceName }}</strong><br><small class="text-secondary">{{ v.plateNumber || 'Sin
+                      Placa' }}</small></td>
+                  <td>{{ v.deviceType }}</td>
+                  <td>RD$ {{ v.hourlyRate.toLocaleString() }}</td>
+                  <td>{{ v.currentHourmeter }} hrs</td>
+                  <td style="text-align: center;">
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                      <button (click)="startEditVehicle(v)" class="btn-action-edit" title="Editar"
+                        style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--success); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(16, 185, 129, 0.3);">✏️</button>
+                      <button (click)="deleteVehicle(v.id)" class="btn-action-delete" title="Eliminar"
+                        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB TAB 4: USERS CRUD -->
+      <div *ngIf="activeConfigSubTab() === 'users'" class="two-column-layout animate-fade-in">
+        <!-- Form -->
+        <div class="card-glass p-6">
+          <h3>👥 {{ editingUser() ? 'Editar Empleado / Usuario' : 'Registrar Empleado / Crear Usuario' }}</h3>
+          <p class="section-desc">{{ editingUser() ? 'Actualice los datos del empleado seleccionado.' : 'Agregue un
+            nuevo operador o chequeador de campo al sistema.' }}</p>
+          <form (submit)="submitUser(); $event.preventDefault()" class="mt-4">
+            <div class="form-group">
+              <label class="form-label" for="usrName">Nombre Completo</label>
+              <input id="usrName" type="text" class="form-input" [(ngModel)]="newUser.name" name="name"
+                placeholder="Ej: Juan Pérez" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="usrUsername">Nombre de Usuario (Para loguearse)</label>
+              <input id="usrUsername" type="text" class="form-input" [(ngModel)]="newUser.username" name="username"
+                placeholder="Ej: jperez" required />
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label" for="usrPassword">
+                  Contraseña <span *ngIf="editingUser()"
+                    style="font-size: 0.75rem; color: var(--text-secondary);">(opcional)</span>
+                </label>
+                <input id="usrPassword" type="password" class="form-input" [(ngModel)]="newUser.password"
+                  name="password" placeholder="{{ editingUser() ? 'Dejar vacío si no cambia' : 'Clave de acceso' }}"
+                  [required]="!editingUser()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="usrRole">Rol / Cargo</label>
+                <select id="usrRole" class="form-select" [(ngModel)]="newUser.role" name="role">
+                  <option value="operator">Operador de Maquinaria</option>
+                  <option value="checker">Chequeador de Obra</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button type="submit" class="btn-primary w-full">{{ editingUser() ? 'Guardar Cambios' : 'Registrar
+                Usuario' }}</button>
+              <button *ngIf="editingUser()" type="button" (click)="cancelEditUser()" class="btn-sync"
+                style="background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-glass); font-weight: 600; color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Cancelar</button>
+            </div>
+          </form>
+        </div>
+        <!-- List -->
+        <div class="card-glass p-6">
+          <h3>📋 Lista de Empleados</h3>
+          <div class="table-container mt-4" style="max-height: 400px; overflow-y: auto;">
+            <table class="table-premium">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Usuario</th>
+                  <th>Cargo</th>
+                  <th style="text-align: center;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let u of users()">
+                  <td><strong>{{ u.name }}</strong></td>
+                  <td><code>{{ u.username }}</code></td>
+                  <td>
+                    <span class="badge" [class.badge-success]="u.role === 'admin'"
+                      [class.badge-warning]="u.role === 'checker'" [class.badge-danger]="u.role === 'operator'">
+                      {{ u.role === 'admin' ? 'Administrador' : u.role === 'checker' ? 'Chequeador' : 'Operador' }}
+                    </span>
+                  </td>
+                  <td style="text-align: center;">
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                      <button (click)="startEditUser(u)" class="btn-action-edit" title="Editar"
+                        style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--success); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(16, 185, 129, 0.3);">✏️</button>
+                      <button (click)="deleteUser(u.id)" class="btn-action-delete" title="Eliminar"
+                        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
