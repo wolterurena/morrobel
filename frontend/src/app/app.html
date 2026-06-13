@@ -27,7 +27,7 @@
       <button type="submit" class="btn-primary w-full">Ingresar al Sistema</button>
     </form>
 
-    <div class="login-footer">
+    <div *ngIf="!isProduction" class="login-footer">
       <p>Credenciales de prueba:</p>
       <code>admin / admin</code> (Administrador)<br>
       <code>chequeador / 123</code> (Chequeador)<br>

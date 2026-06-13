@@ -5,6 +5,7 @@ import { AuthService } from './services/auth.service';
 import { ApiService } from './services/api.service';
 import { SocketService } from './services/socket.service';
 import Swal from 'sweetalert2';
+import { environment } from '../environments/environment';
 
 function getCurrentFortnightPreset(): { start: string; end: string } {
   const now = new Date();
@@ -33,6 +34,7 @@ function getCurrentFortnightPreset(): { start: string; end: string } {
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
+  isProduction = environment.production;
   // Tab/vista activa: 'dashboard' | 'conduces' | 'gastos' | 'reportes'
   activeTab = signal<string>('dashboard');
   activeConfigSubTab = signal<string>('modules');
