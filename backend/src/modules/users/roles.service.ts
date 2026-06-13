@@ -10,14 +10,13 @@ export class RolesService implements OnModuleInit {
   constructor(
     @InjectRepository(Role)
     private rolesRepository: Repository<Role>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     // Asegurar que existan los roles por defecto en el sistema
     const defaultRoles = [
       { name: 'admin', displayName: 'Administrador' },
-      { name: 'checker', displayName: 'Chequeador de Obra' },
-      { name: 'operator', displayName: 'Operador de Maquinaria' }
+      { name: 'operator', displayName: 'Operador' }
     ];
 
     for (const dr of defaultRoles) {

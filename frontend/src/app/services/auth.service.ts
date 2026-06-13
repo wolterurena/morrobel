@@ -8,7 +8,11 @@ export interface User {
   id: string;
   username: string;
   name: string;
-  role: 'admin' | 'checker' | 'operator';
+  role: {
+    id: number,
+    name: 'admin' | 'operator';
+    displayName: 'Administrador' | 'Operador';
+  }
 }
 
 @Injectable({
@@ -16,7 +20,7 @@ export interface User {
 })
 export class AuthService {
   private apiUrl = `${environment.apiUrl}/auth`;
-  
+
   // Usar Angular Signals para reactividad de sesión
   currentUser = signal<User | null>(null);
 

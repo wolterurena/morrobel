@@ -15,7 +15,7 @@ export class UsersService implements OnModuleInit {
     private rolesRepository: Repository<Role>,
     @InjectRepository(PasswordResetRequest)
     private resetRequestsRepository: Repository<PasswordResetRequest>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     const isProd = process.env['NODE_ENV'] === 'production';
@@ -24,11 +24,9 @@ export class UsersService implements OnModuleInit {
     const defaultUsers = isProd
       ? [{ username: 'admin', name: 'Administrador Morrobel', password: 'admin', roleName: 'admin' }]
       : [
-          { username: 'admin', name: 'Administrador Morrobel', password: 'admin', roleName: 'admin' },
-          { username: 'chequeador', name: 'Chequeador Campo', password: '123', roleName: 'checker' },
-          { username: 'cuco', name: 'Cuco', password: '123', roleName: 'operator' },
-          { username: 'manuel', name: 'Manuel Ortega', password: '123', roleName: 'operator' }
-        ];
+        { username: 'admin', name: 'Administrador Morrobel', password: 'admin', roleName: 'admin' },
+        { username: 'cuco', name: 'Cuco', password: '123', roleName: 'operator' },
+      ];
 
     for (const u of defaultUsers) {
       const exists = await this.usersRepository.findOne({ where: { username: u.username } });
@@ -38,7 +36,7 @@ export class UsersService implements OnModuleInit {
         if (!roleEntity) {
           roleEntity = this.rolesRepository.create({
             name: u.roleName,
-            displayName: u.roleName === 'admin' ? 'Administrador' : u.roleName === 'checker' ? 'Chequeador' : 'Operador'
+            displayName: u.roleName === 'admin' ? 'Administrador' : 'Operador'
           });
           await this.rolesRepository.save(roleEntity);
         }
@@ -56,11 +54,11 @@ export class UsersService implements OnModuleInit {
   }
 
   async findOneByUsername(username: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { username } });
+    return this.usersRepository.findOne({ where: { username }, relations: { role: true } });
   }
 
   async findOne(id: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { id } });
+    return this.usersRepository.findOne({ where: { id }, relations: { role: true } });
   }
 
   async findAll(): Promise<User[]> {
@@ -83,11 +81,11 @@ export class UsersService implements OnModuleInit {
   async create(userData: any): Promise<User> {
     const { role, password, ...rest } = userData;
     const user = this.usersRepository.create(rest as Partial<User>) as User;
-    
+
     if (password) {
       user.password = await bcrypt.hash(password, 10);
     }
-    
+
     if (role) {
       const roleName = typeof role === 'string' ? role : role.name;
       const roleEntity = await this.rolesRepository.findOne({ where: { name: roleName } });
@@ -95,18 +93,18 @@ export class UsersService implements OnModuleInit {
         user.role = roleEntity;
       }
     }
-    
+
     return this.usersRepository.save(user);
   }
 
   async update(id: string, userData: any): Promise<User | null> {
     const { role, password, ...rest } = userData;
     const updateData: any = { ...rest };
-    
+
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
     }
-    
+
     if (role) {
       const roleName = typeof role === 'string' ? role : role.name;
       const roleEntity = await this.rolesRepository.findOne({ where: { name: roleName } });
@@ -114,7 +112,7 @@ export class UsersService implements OnModuleInit {
         updateData.role = roleEntity;
       }
     }
-    
+
     await this.usersRepository.save({ id, ...updateData });
     return this.findOne(id);
   }
@@ -134,11 +132,11 @@ export class UsersService implements OnModuleInit {
       if (!masterCode || masterCode !== code) {
         throw new Error('Código maestro de recuperación incorrecto.');
       }
-      
+
       // Reset admin password immediately to "admin"
       const hashedPassword = await bcrypt.hash('admin', 10);
       await this.usersRepository.update(user.id, { password: hashedPassword });
-      
+
       const request = this.resetRequestsRepository.create({ username, status: 'resolved' });
       return this.resetRequestsRepository.save(request);
     }
@@ -165,7 +163,7 @@ export class UsersService implements OnModuleInit {
     if (!request) {
       throw new Error('Solicitud no encontrada.');
     }
-    
+
     const user = await this.findOneByUsername(request.username);
     if (user) {
       const hashedPassword = await bcrypt.hash('123456', 10);

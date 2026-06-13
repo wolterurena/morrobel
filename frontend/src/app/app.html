@@ -28,31 +28,34 @@
         <button type="submit" class="btn-primary w-full">Ingresar al Sistema</button>
       </form>
       <div style="text-align: center; margin-top: 15px;">
-        <a href="javascript:void(0)" (click)="showRecoveryForm.set(true)" style="color: var(--primary); font-size: 0.85rem; text-decoration: underline;">¿Olvidó su contraseña?</a>
+        <a href="javascript:void(0)" (click)="showRecoveryForm.set(true)"
+          style="color: var(--primary); font-size: 0.85rem; text-decoration: underline;">¿Olvidó su contraseña?</a>
       </div>
     </ng-container>
 
     <ng-container *ngIf="showRecoveryForm()">
       <div style="margin-bottom: 20px; text-align: center;">
         <h3 style="font-size: 1.15rem; color: var(--primary); margin-bottom: 5px;">Recuperar Contraseña</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">Ingrese su usuario para enviar la solicitud de restablecimiento al administrador.</p>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">Ingrese su usuario para enviar la solicitud de
+          restablecimiento al administrador.</p>
       </div>
 
       <form (submit)="onRequestReset(); $event.preventDefault()">
         <div class="form-group">
           <label class="form-label" for="recoveryUsername">Nombre de Usuario</label>
-          <input id="recoveryUsername" type="text" class="form-input" [(ngModel)]="recoveryUsername" name="recoveryUsername"
-            placeholder="Ej: jperez" required />
+          <input id="recoveryUsername" type="text" class="form-input" [(ngModel)]="recoveryUsername"
+            name="recoveryUsername" placeholder="Ej: jperez" required />
         </div>
 
         <div class="form-group" *ngIf="recoveryUsername === 'admin'">
           <label class="form-label" for="recoveryMasterCode">Código Maestro de Recuperación</label>
-          <input id="recoveryMasterCode" type="password" class="form-input" [(ngModel)]="recoveryMasterCode" name="recoveryMasterCode"
-            placeholder="Ingrese el código maestro" required />
+          <input id="recoveryMasterCode" type="password" class="form-input" [(ngModel)]="recoveryMasterCode"
+            name="recoveryMasterCode" placeholder="Ingrese el código maestro" required />
         </div>
 
         <button type="submit" class="btn-primary w-full">Solicitar Restablecimiento</button>
-        <button type="button" (click)="showRecoveryForm.set(false); recoveryMasterCode = ''" class="btn-secondary w-full mt-2" style="padding: 10px;">Volver al Login</button>
+        <button type="button" (click)="showRecoveryForm.set(false); recoveryMasterCode = ''"
+          class="btn-secondary w-full mt-2" style="padding: 10px;">Volver al Login</button>
       </form>
     </ng-container>
 
@@ -78,7 +81,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <button *ngIf="authService.currentUser()?.role !== 'operator' && isModuleEnabled('dashboard')"
+      <button *ngIf="authService.currentUser()?.role?.name !== 'operator' && isModuleEnabled('dashboard')"
         [class.active]="activeTab() === 'dashboard'" (click)="activeTab.set('dashboard')" class="nav-item">
         <span class="nav-icon">📊</span> Dashboard
       </button>
@@ -88,30 +91,28 @@
         <span class="nav-icon">📝</span> Registro Conduces
       </button>
 
-      <button *ngIf="authService.currentUser()?.role !== 'operator' && isModuleEnabled('gastos')"
+      <button *ngIf="authService.currentUser()?.role?.name !== 'operator' && isModuleEnabled('gastos')"
         [class.active]="activeTab() === 'gastos'" (click)="activeTab.set('gastos')" class="nav-item">
         <span class="nav-icon">💵</span> Registro Egresos
       </button>
 
-      <button *ngIf="authService.currentUser()?.role !== 'operator' && isModuleEnabled('reportes')"
+      <button *ngIf="authService.currentUser()?.role?.name !== 'operator' && isModuleEnabled('reportes')"
         [class.active]="activeTab() === 'reportes'" (click)="activeTab.set('reportes')" class="nav-item">
         <span class="nav-icon">📈</span> Reportes Financieros
       </button>
 
-      <button *ngIf="authService.currentUser()?.role === 'admin'" [class.active]="activeTab() === 'config'"
+      <button *ngIf="authService.currentUser()?.role?.name === 'admin'" [class.active]="activeTab() === 'config'"
         (click)="activeTab.set('config')" class="nav-item">
         <span class="nav-icon">⚙️</span> Configuración
       </button>
     </nav>
-
     <div class="user-info">
       <div class="user-avatar">{{ (authService.currentUser()?.name || 'U')[0] }}</div>
       <div class="user-details">
-        <p class="user-name">{{ authService.currentUser()?.name }}</p>
-        <span class="badge" [class.badge-success]="authService.currentUser()?.role === 'admin'"
-          [class.badge-warning]="authService.currentUser()?.role === 'checker'"
-          [class.badge-danger]="authService.currentUser()?.role === 'operator'">
-          {{ authService.currentUser()?.role }}
+        <p class="user-name">{{ authService.currentUser()?.username }}</p>
+        <span class="badge" [class.badge-success]="authService.currentUser()?.role?.name === 'admin'"
+          [class.badge-danger]="authService.currentUser()?.role?.name === 'operator'">
+          {{ authService.currentUser()?.role?.displayName }}
         </span>
       </div>
       <button class="btn-logout" (click)="onLogout()" title="Cerrar Sesión">
@@ -255,7 +256,7 @@
           <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary);">Monitoreo GPS Apagado</h3>
           <p class="text-secondary" style="margin-top: 10px; max-width: 320px;">El módulo de visualización y
             posicionamiento en tiempo real se encuentra desactivado temporalmente.</p>
-          <span *ngIf="authService.currentUser()?.role === 'admin'" class="badge badge-warning"
+          <span *ngIf="authService.currentUser()?.role?.name === 'admin'" class="badge badge-warning"
             style="margin-top: 20px; font-weight: 600;">
             Reactívelo en la pestaña de Configuración ⚙️
           </span>
@@ -292,7 +293,7 @@
     <!-- TAB 2: CONDUCES (REGISTRO TRABAJOS) -->
     <section *ngIf="activeTab() === 'conduces'" class="tab-pane animate-fade-in">
       <!-- Pendientes de revisión (Solo Administrador) -->
-      <div *ngIf="authService.currentUser()?.role === 'admin' && pendingWorkOrders().length > 0" class="mb-4">
+      <div *ngIf="authService.currentUser()?.role?.name === 'admin' && pendingWorkOrders().length > 0" class="mb-4">
         <h3>📋 Conduces Pendientes de Revisión</h3>
         <p class="section-desc">Revise los conduces ingresados por los chequeadores para que el sistema calcule los
           montos automáticos e incremente los horómetros.</p>
@@ -376,7 +377,7 @@
 
       <div>
         <!-- FORM (Solo Operador) -->
-        <div *ngIf="authService.currentUser()?.role === 'operator'" class="form-container-panel card-glass">
+        <div *ngIf="authService.currentUser()?.role?.name === 'operator'" class="form-container-panel card-glass">
           <h3>📝 Registrar Conduce Físico (Jornada)</h3>
 
           <div *ngIf="offlineQueue().length > 0"
@@ -426,11 +427,11 @@
               <div class="form-group">
                 <label class="form-label" for="operatorNameRaw">Operador (Nombre)</label>
                 <!-- Si es operador logueado, mostrar su nombre directamente -->
-                <input *ngIf="authService.currentUser()?.role === 'operator'" type="text" class="form-input"
+                <input *ngIf="authService.currentUser()?.role?.name === 'operator'" type="text" class="form-input"
                   [value]="authService.currentUser()?.name" readonly />
                 <!-- Si es administrador o chequeador, permitir seleccionar de la lista -->
-                <select *ngIf="authService.currentUser()?.role !== 'operator'" id="operatorNameRaw" class="form-select"
-                  [(ngModel)]="newConduce.operatorNameRaw" name="operatorNameRaw" required>
+                <select *ngIf="authService.currentUser()?.role?.name !== 'operator'" id="operatorNameRaw"
+                  class="form-select" [(ngModel)]="newConduce.operatorNameRaw" name="operatorNameRaw" required>
                   <option value="" disabled>Seleccione el operador</option>
                   <option *ngFor="let op of operators()" [value]="op.name">{{ op.name }}</option>
                 </select>
@@ -556,7 +557,7 @@
         </div>
 
         <!-- HISTORY TABLE -->
-        <div *ngIf="authService.currentUser()?.role === 'admin'" class="history-panel card-glass">
+        <div *ngIf="authService.currentUser()?.role?.name === 'admin'" class="history-panel card-glass">
           <h3>📋 Historial de Conduces Aprobados</h3>
           <div class="table-container mt-4">
             <table class="table-premium">
@@ -568,7 +569,8 @@
                   <th>Equipo</th>
                   <th>Horas</th>
                   <th>Total</th>
-                  <th *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">Acciones</th>
+                  <th *ngIf="authService.currentUser()?.role?.name === 'admin'" style="text-align: center;">Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -581,13 +583,17 @@
                   </td>
                   <td data-label="Equipo">{{ order.vehicle?.deviceName || 'Desconocido' }}</td>
                   <td data-label="Horas">{{ order.totalHours }} hrs</td>
-                  <td data-label="Total"><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString() }}</strong></td>
-                  <td *ngIf="authService.currentUser()?.role === 'admin'" data-label="Acciones" style="text-align: center;">
-                    <button (click)="deleteWorkOrder(order.id)" class="btn-action-delete" title="Eliminar Conduce" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
+                  <td data-label="Total"><strong class="color-amber">RD$ {{ order.totalAmount.toLocaleString()
+                      }}</strong></td>
+                  <td *ngIf="authService.currentUser()?.role?.name === 'admin'" data-label="Acciones"
+                    style="text-align: center;">
+                    <button (click)="deleteWorkOrder(order.id)" class="btn-action-delete" title="Eliminar Conduce"
+                      style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
                   </td>
                 </tr>
                 <tr *ngIf="approvedWorkOrders().length === 0">
-                  <td [attr.colspan]="authService.currentUser()?.role === 'admin' ? 7 : 6" class="text-center text-secondary">No se han registrado conduces aprobados todavía.</td>
+                  <td [attr.colspan]="authService.currentUser()?.role?.name === 'admin' ? 7 : 6"
+                    class="text-center text-secondary">No se han registrado conduces aprobados todavía.</td>
                 </tr>
               </tbody>
             </table>
@@ -678,7 +684,8 @@
                   <th>Descripción</th>
                   <th>Máquina</th>
                   <th>Monto</th>
-                  <th *ngIf="authService.currentUser()?.role === 'admin'" style="text-align: center;">Acciones</th>
+                  <th *ngIf="authService.currentUser()?.role?.name  === 'admin'" style="text-align: center;">Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -693,16 +700,20 @@
                   </td>
                   <td data-label="Descripción">
                     <div class="exp-desc">{{ exp.description }}</div>
-                    <small *ngIf="exp.operatorNameRaw" class="text-secondary">Operador: {{ exp.operatorNameRaw }}</small>
+                    <small *ngIf="exp.operatorNameRaw" class="text-secondary">Operador: {{ exp.operatorNameRaw
+                      }}</small>
                   </td>
                   <td data-label="Máquina">{{ exp.vehicle?.deviceName || 'General' }}</td>
                   <td data-label="Monto"><strong class="color-red">RD$ {{ exp.amount.toLocaleString() }}</strong></td>
-                  <td *ngIf="authService.currentUser()?.role === 'admin'" data-label="Acciones" style="text-align: center;">
-                    <button (click)="deleteExpense(exp.id)" class="btn-action-delete" title="Eliminar Gasto" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
+                  <td *ngIf="authService.currentUser()?.role?.name  === 'admin'" data-label="Acciones"
+                    style="text-align: center;">
+                    <button (click)="deleteExpense(exp.id)" class="btn-action-delete" title="Eliminar Gasto"
+                      style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; border-color: rgba(239, 68, 68, 0.3);">🗑️</button>
                   </td>
                 </tr>
                 <tr *ngIf="expenses().length === 0">
-                  <td [attr.colspan]="authService.currentUser()?.role === 'admin' ? 6 : 5" class="text-center text-secondary">No se han registrado egresos todavía.</td>
+                  <td [attr.colspan]="authService.currentUser()?.role?.name === 'admin' ? 6 : 5"
+                    class="text-center text-secondary">No se han registrado egresos todavía.</td>
                 </tr>
               </tbody>
             </table>
@@ -815,8 +826,10 @@
               <tbody>
                 <tr *ngFor="let op of operatorSettlements()">
                   <td data-label="Operador"><strong>{{ op.name }}</strong></td>
-                  <td data-label="Horas Trabajadas"><strong class="color-amber">{{ op.hours | number:'1.1-2' }} hrs</strong></td>
-                  <td data-label="Adelantos / Préstamos"><strong class="color-red">RD$ {{ op.advances.toLocaleString() }}</strong></td>
+                  <td data-label="Horas Trabajadas"><strong class="color-amber">{{ op.hours | number:'1.1-2' }}
+                      hrs</strong></td>
+                  <td data-label="Adelantos / Préstamos"><strong class="color-red">RD$ {{ op.advances.toLocaleString()
+                      }}</strong></td>
                 </tr>
                 <tr *ngIf="operatorSettlements().length === 0">
                   <td colspan="3" class="text-center text-secondary" style="padding: 20px;">No hay operadores
@@ -867,7 +880,7 @@
     </section>
 
     <!-- TAB 5: CONFIGURACIÓN (Solo Admin) -->
-    <section *ngIf="activeTab() === 'config' && authService.currentUser()?.role === 'admin'"
+    <section *ngIf="activeTab() === 'config' && authService.currentUser()?.role?.name === 'admin'"
       class="tab-pane animate-fade-in">
 
       <!-- SUB TABS BAR -->
@@ -891,7 +904,8 @@
         <button [class.active]="activeConfigSubTab() === 'resets'" (click)="activeConfigSubTab.set('resets')"
           class="config-tab-item">
           🔑 Solicitudes de Clave
-          <span *ngIf="resetRequests().length > 0" class="badge badge-danger" style="margin-left: 5px; padding: 2px 6px;">{{ resetRequests().length }}</span>
+          <span *ngIf="resetRequests().length > 0" class="badge badge-danger"
+            style="margin-left: 5px; padding: 2px 6px;">{{ resetRequests().length }}</span>
         </button>
       </div>
 
@@ -1075,7 +1089,8 @@
               </thead>
               <tbody>
                 <tr *ngFor="let v of vehicles()">
-                  <td data-label="Equipo"><strong>{{ v.deviceName }}</strong><br><small class="text-secondary">{{ v.plateNumber || 'Sin Placa' }}</small></td>
+                  <td data-label="Equipo"><strong>{{ v.deviceName }}</strong><br><small class="text-secondary">{{
+                      v.plateNumber || 'Sin Placa' }}</small></td>
                   <td data-label="Tipo">{{ v.deviceType }}</td>
                   <td data-label="Tarifa/Hora">RD$ {{ v.hourlyRate.toLocaleString() }}</td>
                   <td data-label="Horómetro">{{ v.currentHourmeter }} hrs</td>
@@ -1124,7 +1139,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label" for="usrRole">Rol / Cargo</label>
-                <select id="usrRole" class="form-select" [(ngModel)]="newUser.role" name="role">
+                <select id="usrRole" class="form-select" [(ngModel)]="newUser.name" name="role.name">
                   <option value="operator">Operador de Maquinaria</option>
                   <option value="checker">Chequeador de Obra</option>
                   <option value="admin">Administrador</option>
@@ -1154,12 +1169,12 @@
               </thead>
               <tbody>
                 <tr *ngFor="let u of users()">
-                  <td data-label="Nombre"><strong>{{ u.name }}</strong></td>
-                  <td data-label="Usuario"><code>{{ u.username }}</code></td>
+                  <td data-label="Nombre"><strong>{{ u.username }}</strong></td>
+                  <td data-label="Usuario"><code>{{ u.user }}</code></td>
                   <td data-label="Cargo">
-                    <span class="badge" [class.badge-success]="u.role === 'admin'"
-                      [class.badge-warning]="u.role === 'checker'" [class.badge-danger]="u.role === 'operator'">
-                      {{ u.role === 'admin' ? 'Administrador' : u.role === 'checker' ? 'Chequeador' : 'Operador' }}
+                    <span class="badge" [class.badge-success]="u.role?.name === 'admin'"
+                      [class.badge-danger]="u.role?.name === 'operator'">
+                      {{ u.role?.name === 'admin' ? 'Administrador' : 'Operador'}}
                     </span>
                   </td>
                   <td data-label="Acciones" style="text-align: center;">
@@ -1180,7 +1195,8 @@
       <!-- SUB TAB 5: PASSWORD RESET REQUESTS -->
       <div *ngIf="activeConfigSubTab() === 'resets'" class="card-glass p-6 animate-fade-in">
         <h3>🔑 Solicitudes de Restablecimiento de Contraseña</h3>
-        <p class="section-desc mb-4">A continuación se listan los usuarios que han solicitado restablecer su contraseña. Al aprobar, su clave cambiará a <strong>123456</strong>.</p>
+        <p class="section-desc mb-4">A continuación se listan los usuarios que han solicitado restablecer su contraseña.
+          Al aprobar, su clave cambiará a <strong>123456</strong>.</p>
 
         <div class="table-container mt-4">
           <table class="table-premium">
@@ -1202,7 +1218,8 @@
                 </td>
               </tr>
               <tr *ngIf="resetRequests().length === 0">
-                <td colspan="3" class="text-center text-secondary" style="padding: 20px;">No hay solicitudes de restablecimiento pendientes.</td>
+                <td colspan="3" class="text-center text-secondary" style="padding: 20px;">No hay solicitudes de
+                  restablecimiento pendientes.</td>
               </tr>
             </tbody>
           </table>

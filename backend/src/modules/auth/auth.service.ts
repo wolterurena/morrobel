@@ -14,19 +14,19 @@ export class AuthService {
     const user = await this.usersService.findOneByUsername(username);
     if (user && user.password) {
       let isValid = false;
-      if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
-        isValid = await bcrypt.compare(pass, user.password);
-        console.log('Clave hasheada', user.password, isValid);
-      } else {
-        // Plaintext password fallback
-        isValid = user.password === pass;
-        console.log('Clave no hasheada', user.password, isValid);
-        if (isValid) {
-          // Lazy migration: hash password and update user in database
-          const hashedPassword = await bcrypt.hash(pass, 10);
-          await this.usersService.update(user.id, { password: hashedPassword });
-        }
-      }
+      // if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+      isValid = await bcrypt.compare(pass, user.password);
+      console.log('Clave hasheada', user.password, isValid);
+      // } else {
+      //   // Plaintext password fallback
+      //   isValid = user.password === pass;
+      //   console.log('Clave no hasheada', user.password, isValid);
+      //   if (isValid) {
+      //     // Lazy migration: hash password and update user in database
+      //     const hashedPassword = await bcrypt.hash(pass, 10);
+      //     await this.usersService.update(user.id, { password: hashedPassword });
+      //   }
+      // }
       if (isValid) {
         const { password, ...result } = user;
         return result;

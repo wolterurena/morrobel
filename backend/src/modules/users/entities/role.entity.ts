@@ -6,7 +6,7 @@ export class Role {
   id: string;
 
   @Column({ unique: true })
-  name: string; // e.g. 'admin', 'operator', 'checker'
+  name: string; // e.g. 'admin', 'operator'
 
   @Column()
   displayName: string; // e.g. 'Administrador', 'Operador de Maquinaria'

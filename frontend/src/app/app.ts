@@ -152,9 +152,9 @@ export class App implements OnInit {
     const start = this.reportStartDate();
     const end = this.reportEndDate();
     if (!start || !end) return this.workOrders().filter(o => o.status === 'approved');
-    return this.workOrders().filter(o => 
-      o.status === 'approved' && 
-      o.date.toString() >= start && 
+    return this.workOrders().filter(o =>
+      o.status === 'approved' &&
+      o.date.toString() >= start &&
       o.date.toString() <= end
     );
   });
@@ -163,8 +163,8 @@ export class App implements OnInit {
     const start = this.reportStartDate();
     const end = this.reportEndDate();
     if (!start || !end) return this.expenses();
-    return this.expenses().filter(e => 
-      e.date.toString() >= start && 
+    return this.expenses().filter(e =>
+      e.date.toString() >= start &&
       e.date.toString() <= end
     );
   });
@@ -188,7 +188,7 @@ export class App implements OnInit {
   // Cálculos de liquidación quincenal por operador (horas trabajadas vs adelantos/préstamos recibidos)
   operatorSettlements = computed(() => {
     const settlements: Record<string, { name: string; hours: number; advances: number }> = {};
-    
+
     // Inicializar con los operadores existentes en el sistema
     this.operators().forEach(op => {
       settlements[op.name] = { name: op.name, hours: 0, advances: 0 };
@@ -306,7 +306,7 @@ export class App implements OnInit {
 
     this.loadNextConduceNumber();
 
-    if (this.authService.currentUser()?.role === 'admin') {
+    if (this.authService.currentUser()?.role?.name === 'admin') {
       this.apiService.getGpsSettings().subscribe({
         next: (data) => this.gpsSettings.set(data),
         error: (err) => console.error('Error al cargar configuración GPS:', err)
@@ -354,8 +354,8 @@ export class App implements OnInit {
       const idx = orders.findIndex(o => o.id === approvedInfo.id);
       if (idx !== -1) {
         const updatedOrders = [...orders];
-        updatedOrders[idx] = { 
-          ...updatedOrders[idx], 
+        updatedOrders[idx] = {
+          ...updatedOrders[idx],
           status: 'approved',
           totalHours: approvedInfo.totalHours,
           totalAmount: approvedInfo.totalAmount
@@ -407,7 +407,7 @@ export class App implements OnInit {
       next: () => {
         this.loginUsername = '';
         this.loginPassword = '';
-        if (this.authService.currentUser()?.role === 'operator') {
+        if (this.authService.currentUser()?.role.name === 'operator') {
           this.activeTab.set('conduces');
         } else {
           this.activeTab.set('dashboard');
@@ -428,7 +428,7 @@ export class App implements OnInit {
     this.conduceError = '';
     this.conduceSuccess = '';
 
-    const opName = this.authService.currentUser()?.role === 'operator'
+    const opName = this.authService.currentUser()?.role?.name === 'operator'
       ? this.authService.currentUser()?.name
       : this.newConduce.operatorNameRaw;
 
@@ -1052,7 +1052,7 @@ export class App implements OnInit {
   calculateFrontendTotalHours(): number {
     const startObj = this.parseValue(this.newConduce.startHourmeter);
     const endObj = this.parseValue(this.newConduce.endHourmeter);
-    
+
     let part1Diff = 0;
     if (startObj.isTime && endObj.isTime) {
       part1Diff = endObj.value - startObj.value;
@@ -1061,7 +1061,7 @@ export class App implements OnInit {
       part1Diff = endObj.value - startObj.value;
       if (part1Diff < 0) part1Diff = 0;
     }
-    
+
     const part2StartObj = this.parseValue(this.newConduce.shift2Start);
     const part2EndObj = this.parseValue(this.newConduce.shift2End);
     let part2Diff = 0;
@@ -1069,7 +1069,7 @@ export class App implements OnInit {
       part2Diff = part2EndObj.value - part2StartObj.value;
       if (part2Diff < 0) part2Diff += 24;
     }
-    
+
     return Number((part1Diff + part2Diff).toFixed(2));
   }
 
@@ -1091,7 +1091,7 @@ export class App implements OnInit {
     this.isDrawing = true;
     const canvas = this.getCanvas();
     if (!canvas) return;
-    
+
     // Auto-adjust internal resolution to match screen dimensions to prevent scaling issues
     if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
       const temp = canvas.toDataURL();
@@ -1103,7 +1103,7 @@ export class App implements OnInit {
         canvas.getContext('2d')?.drawImage(img, 0, 0);
       };
     }
-    
+
     const rect = canvas.getBoundingClientRect();
     this.lastX = e.clientX - rect.left;
     this.lastY = e.clientY - rect.top;
@@ -1134,7 +1134,7 @@ export class App implements OnInit {
     this.isDrawing = true;
     const canvas = this.getCanvas();
     if (!canvas || e.touches.length === 0) return;
-    
+
     if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
       const temp = canvas.toDataURL();
       canvas.width = canvas.clientWidth;
@@ -1145,7 +1145,7 @@ export class App implements OnInit {
         canvas.getContext('2d')?.drawImage(img, 0, 0);
       };
     }
-    
+
     const rect = canvas.getBoundingClientRect();
     this.lastX = e.touches[0].clientX - rect.left;
     this.lastY = e.touches[0].clientY - rect.top;
@@ -1221,14 +1221,14 @@ export class App implements OnInit {
         localStorage.setItem('offline_conduces', JSON.stringify(updated));
         this.offlineQueue.set(updated);
         this.isSyncing = false;
-        
+
         // Sincronizar el siguiente conduce en la cola
         this.syncOfflineConduces();
       },
       error: (err) => {
         console.error('[Offline Sync] Error al sincronizar conduce offline:', err);
         this.isSyncing = false;
-        
+
         // Si no es error de red (status !== 0), significa error de validación del servidor (4xx o 5xx)
         // Lo sacamos de la cola para que un conduce corrupto no tranque la cola indefinidamente
         if (err.status !== 0) {
@@ -1257,11 +1257,11 @@ export class App implements OnInit {
         this.showRecoveryForm.set(false);
         this.recoveryUsername = '';
         this.recoveryMasterCode = '';
-        
+
         Swal.fire({
           title: isAdmin ? '¡Contraseña Restablecida!' : 'Solicitud Enviada',
-          text: isAdmin 
-            ? 'Tu contraseña de administrador ha sido restablecida a "admin". Por favor inicia sesión y cámbiala de inmediato.' 
+          text: isAdmin
+            ? 'Tu contraseña de administrador ha sido restablecida a "admin". Por favor inicia sesión y cámbiala de inmediato.'
             : 'Se ha enviado tu solicitud. Comunícate con el administrador para que apruebe tu restablecimiento.',
           icon: 'success',
           background: '#111827',
