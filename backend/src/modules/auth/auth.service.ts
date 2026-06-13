@@ -8,7 +8,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByUsername(username);
@@ -16,9 +16,11 @@ export class AuthService {
       let isValid = false;
       if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
         isValid = await bcrypt.compare(pass, user.password);
+        console.log('Clave hasheada', user.password, isValid);
       } else {
         // Plaintext password fallback
         isValid = user.password === pass;
+        console.log('Clave no hasheada', user.password, isValid);
         if (isValid) {
           // Lazy migration: hash password and update user in database
           const hashedPassword = await bcrypt.hash(pass, 10);
