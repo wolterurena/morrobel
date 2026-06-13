@@ -1,10 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-
-export enum UserRole {
-  ADMIN = 'admin',
-  OPERATOR = 'operator',
-  CHECKER = 'checker',
-}
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Role } from './role.entity';
 
 @Entity('users')
 export class User {
@@ -20,12 +15,9 @@ export class User {
   @Column()
   name: string;
 
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.CHECKER,
-  })
-  role: UserRole;
+  @ManyToOne(() => Role, { eager: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
