@@ -11,18 +11,22 @@ export class UsersService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    const isProd = process.env['NODE_ENV'] === 'production';
+
     // Asegurar que existan todos los usuarios de prueba
-    const defaultUsers = [
-      { username: 'admin', name: 'Administrador Morrobel', password: 'admin', role: UserRole.ADMIN },
-      { username: 'chequeador', name: 'Chequeador Campo', password: '123', role: UserRole.CHECKER },
-      { username: 'cuco', name: 'Cuco', password: '123', role: UserRole.OPERATOR },
-      { username: 'manuel', name: 'Manuel Ortega', password: '123', role: UserRole.OPERATOR }
-    ];
+    const defaultUsers = isProd
+      ? [{ username: 'admin', name: 'Administrador Morrobel', password: 'admin', role: UserRole.ADMIN }]
+      : [
+          { username: 'admin', name: 'Administrador Morrobel', password: 'admin', role: UserRole.ADMIN },
+          { username: 'chequeador', name: 'Chequeador Campo', password: '123', role: UserRole.CHECKER },
+          { username: 'cuco', name: 'Cuco', password: '123', role: UserRole.OPERATOR },
+          { username: 'manuel', name: 'Manuel Ortega', password: '123', role: UserRole.OPERATOR }
+        ];
 
     for (const u of defaultUsers) {
       const exists = await this.usersRepository.findOne({ where: { username: u.username } });
       if (!exists) {
-        console.log(`[Users] Sembrando usuario de prueba: ${u.username}`);
+        console.log(`[Users] Sembrando usuario: ${u.username}`);
         const user = this.usersRepository.create(u);
         await this.usersRepository.save(user);
       }

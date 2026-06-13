@@ -20,6 +20,13 @@ export class VehiclesService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    const isProd = process.env['NODE_ENV'] === 'production';
+    if (isProd) {
+      this.logger.log('Entorno de producción detectado. Omitiendo siembra de vehículos semilla.');
+      this.startGpsSimulation();
+      return;
+    }
+
     // Inicializar vehículos semilla si no hay ninguno
     const count = await this.vehicleRepository.count();
     if (count === 0) {
