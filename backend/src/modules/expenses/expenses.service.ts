@@ -88,6 +88,14 @@ export class ExpensesService implements OnModuleInit {
       }
     }
 
+    // Asignar vehículo por defecto si no se especificó
+    if (!data.vehicleId) {
+      const vehicles = await this.vehiclesService.findAll();
+      if (vehicles && vehicles.length > 0) {
+        data.vehicleId = vehicles[0].id;
+      }
+    }
+
     const expense = this.expenseRepository.create(data);
     const saved = await this.expenseRepository.save(expense);
 

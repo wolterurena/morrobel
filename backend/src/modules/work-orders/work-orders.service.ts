@@ -161,6 +161,9 @@ export class WorkOrdersService {
       capacity: calc.processed.capacity,
       hourlyRate: 0,
       totalAmount: 0,
+      oil: Number(data.oil || 0),
+      gasoil: Number(data.gasoil || 0),
+      gasoline: Number(data.gasoline || 0),
       status: 'pending',
     });
 
@@ -191,9 +194,9 @@ export class WorkOrdersService {
     }
 
     const calc = calculateHoursFromData(workOrder);
+    const expenseTotal = Number(workOrder.oil || 0) + Number(workOrder.gasoil || 0) + Number(workOrder.gasoline || 0);
     const hourlyRate = Number(vehicle.hourlyRate);
-    const totalAmount = calc.totalHours * hourlyRate;
-
+    const totalAmount = calc.totalHours * hourlyRate + expenseTotal;
     workOrder.totalHours = calc.totalHours;
     workOrder.shift1Start = calc.processed.shift1Start;
     workOrder.shift1End = calc.processed.shift1End;

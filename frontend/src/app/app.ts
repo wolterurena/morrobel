@@ -139,7 +139,11 @@ export class App implements OnInit {
   });
 
   totalExpenses = computed(() => {
-    return this.expenses().reduce((acc, exp) => acc + Number(exp.amount || 0), 0);
+    const expenseSum = this.expenses().reduce((acc, exp) => acc + Number(exp.amount || 0), 0);
+    const fuelSum = this.workOrders()
+      .filter(o => o.status === 'approved')
+      .reduce((acc, o) => acc + (Number(o.oil) || 0) + (Number(o.gasoil) || 0) + (Number(o.gasoline) || 0), 0);
+    return expenseSum + fuelSum;
   });
 
   totalProfit = computed(() => {
@@ -265,6 +269,15 @@ export class App implements OnInit {
   ngOnInit() {
     this.setupSocketListeners();
     this.offlineQueue.set(this.getOfflineQueue());
+    // Set default active tab based on logged-in user role
+    if (this.authService.isLoggedIn()) {
+      const roleName = this.authService.currentUser()?.role?.name;
+      if (roleName === 'operator') {
+        this.activeTab.set('conduces');
+      } else {
+        this.activeTab.set('dashboard');
+      }
+    }
 
     // Sincronizar automáticamente cuando el navegador vuelva a estar online
     window.addEventListener('online', () => {
