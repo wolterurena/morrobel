@@ -370,14 +370,11 @@ export class App implements OnInit {
       const idx = orders.findIndex(o => o.id === approvedInfo.id);
       if (idx !== -1) {
         const updatedOrders = [...orders];
-        updatedOrders[idx] = {
-          ...updatedOrders[idx],
-          status: 'approved',
-          totalHours: approvedInfo.totalHours,
-          totalAmount: approvedInfo.totalAmount
-        };
+        // Reemplazar la orden completa con la información recibida (incluye vehicle)
+        updatedOrders[idx] = { ...updatedOrders[idx], ...approvedInfo };
         this.workOrders.set(updatedOrders);
       }
+
 
       // Actualizar también el horómetro del vehículo afectado localmente
       const currentVehicles = this.vehicles();

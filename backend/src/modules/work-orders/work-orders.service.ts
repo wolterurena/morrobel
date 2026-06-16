@@ -55,7 +55,7 @@ function calculateHoursFromData(data: any): { totalHours: number; processed: any
 
   const startObj = parseValue(startVal);
   const endObj = parseValue(endVal);
-  
+
   let part1Diff = 0;
   let isClockPart1 = false;
   let shift1Start: string | null = null;
@@ -110,7 +110,7 @@ export class WorkOrdersService {
     private workOrderRepository: Repository<WorkOrder>,
     private vehiclesService: VehiclesService,
     private socketGateway: SocketGateway,
-  ) {}
+  ) { }
 
   async findAll(): Promise<WorkOrder[]> {
     return this.workOrderRepository.find({
@@ -139,7 +139,7 @@ export class WorkOrdersService {
       capacity: isTruck ? vehicle.capacity : 0,
       trips: isTruck ? data.trips : 0
     });
-    
+
     // Auto-generar número de conduce secuencial si no se suministra
     if (!data.conduceNumber) {
       const res = await this.getNextConduceNumber();
@@ -147,6 +147,10 @@ export class WorkOrdersService {
     }
 
     // Crear conduce en estado pendiente (sin cálculos definitivos y sin actualizar horómetro de la máquina)
+    // Calcular tarifa horaria y costo al crear (para que la UI los muestre inmediatamente)
+    const expenseTotal = Number(data.oil || 0) + Number(data.gasoil || 0) + Number(data.gasoline || 0);
+    const hourlyRateCalc = Number(vehicle.hourlyRate);
+    const totalAmountCalc = calc.totalHours * hourlyRateCalc;
     const workOrder = this.workOrderRepository.create({
       ...data,
       totalHours: calc.totalHours,
@@ -159,8 +163,9 @@ export class WorkOrdersService {
       registerType: calc.processed.registerType,
       trips: calc.processed.trips,
       capacity: calc.processed.capacity,
-      hourlyRate: 0,
-      totalAmount: 0,
+      hourlyRate: hourlyRateCalc,
+      totalAmount: totalAmountCalc,
+      totalFuelExpense: expenseTotal,
       oil: Number(data.oil || 0),
       gasoil: Number(data.gasoil || 0),
       gasoline: Number(data.gasoline || 0),
@@ -169,13 +174,20 @@ export class WorkOrdersService {
 
     const saved = await this.workOrderRepository.save(workOrder);
 
-    // Emitir por WebSockets (alerta al admin que llegó un conduce nuevo)
-    this.socketGateway.emitNewWorkOrder({
-      ...saved,
-      vehicleName: vehicle.deviceName,
+    // Cargar la entidad completa con la relación vehicle para que la UI disponga del equipo, tarifa horaria y costo calculado
+    const fullOrder = await this.workOrderRepository.findOne({
+      where: { id: saved.id },
+      relations: { vehicle: true },
     });
 
-    return saved;
+    if (!fullOrder) {
+      throw new BadRequestException('Error al cargar la orden de trabajo recién creada.');
+    }
+
+      // Emitir por WebSockets la orden completa (incluye vehicle)
+      this.socketGateway.emitNewWorkOrder(fullOrder);
+
+    return fullOrder!;
   }
 
   async approve(id: string): Promise<WorkOrder | null> {
@@ -196,7 +208,9 @@ export class WorkOrdersService {
     const calc = calculateHoursFromData(workOrder);
     const expenseTotal = Number(workOrder.oil || 0) + Number(workOrder.gasoil || 0) + Number(workOrder.gasoline || 0);
     const hourlyRate = Number(vehicle.hourlyRate);
-    const totalAmount = calc.totalHours * hourlyRate + expenseTotal;
+    const totalAmount = calc.totalHours * hourlyRate;
+    // Guardar gasto de combustible por separado
+    workOrder.totalFuelExpense = expenseTotal;
     workOrder.totalHours = calc.totalHours;
     workOrder.shift1Start = calc.processed.shift1Start;
     workOrder.shift1End = calc.processed.shift1End;
@@ -227,30 +241,32 @@ export class WorkOrdersService {
     });
 
     // Avisar vía sockets del cambio de estado y actualización del horómetro
-    this.socketGateway.server.emit('work_order_approved', {
-      id: saved.id,
-      status: 'approved',
-      totalHours: calc.totalHours,
-      totalAmount,
-      endHourmeter: newHourmeter,
-      vehicleId: vehicle.id,
+    // Obtener la orden completa con la relación vehicle para enviarla vía socket
+    const approvedFullOrder = await this.workOrderRepository.findOne({
+      where: { id: saved.id },
+      relations: { vehicle: true },
     });
+    // Emitir la orden completa (incluye vehicle) en el evento de aprobación
+    this.socketGateway.server.emit('work_order_approved', approvedFullOrder!);
+
 
     return saved;
   }
 
-  async getSummaryStats(): Promise<{ totalIncome: number; totalHours: number }> {
+  async getSummaryStats(): Promise<{ totalIncome: number; totalHours: number; totalFuelExpense: number }> {
     // Los reportes financieros solo toman en cuenta los conduces aprobados
     const orders = await this.workOrderRepository.find({ where: { status: 'approved' } });
     let totalIncome = 0;
     let totalHours = 0;
+    let totalFuelExpense = 0;
 
     for (const o of orders) {
       totalIncome += Number(o.totalAmount || 0);
       totalHours += Number(o.totalHours || 0);
+      totalFuelExpense += Number(o.totalFuelExpense || 0);
     }
 
-    return { totalIncome, totalHours };
+    return { totalIncome, totalHours, totalFuelExpense };
   }
 
   async getNextConduceNumber(): Promise<{ nextNumber: string }> {

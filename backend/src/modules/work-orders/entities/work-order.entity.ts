@@ -44,6 +44,7 @@ export class WorkOrder {
 
   @Column({ type: 'decimal', precision: 8, scale: 2, default: 0 })
   totalHours: number; // Horas Totales trabajadas (ej. 11.5)
+  totalFuelExpense: number; // Gastos de combustible (aceite, gasoil, gasolina)
 
   @Column({ type: 'integer', default: 0, nullable: true })
   trips: number; // Número de viajes realizados
